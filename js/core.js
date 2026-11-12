@@ -372,6 +372,15 @@
 
   /* ---------- листы ---------- */
   const stack = [];
+  // Кнопка и жест «Назад» на Android закрывают верхний лист, а не приложение:
+  // каждый открытый лист добавляет запись в историю, «Назад» её снимает.
+  // На странице claude.ai историю не трогаем — там она принадлежит оболочке.
+  const useHist = !(window.claude && window.claude.use) && !!(window.history && history.pushState);
+  let skipPop = 0;
+  window.addEventListener('popstate', () => {
+    if (skipPop > 0) { skipPop--; return; }
+    for (let i = stack.length - 1; i >= 0; i--) { const s = stack[i]; if (s._hist) { s._hist = false; s.close(); return; } }
+  });
   function sheet(o) {
     const host = document.getElementById('sheets'), root = document.getElementById('root'), app = document.getElementById('app');
     const detent = o.detent || 'large', locked = !!o.locked;
@@ -392,6 +401,7 @@
     const pushBack = detent === 'large' && stack.length === 0;
     let H = 0, y = 0, anim = null, closed = false;
     stack.push(api);
+    if (useHist && !locked) { try { history.pushState({ ritm: 'sheet' }, ''); api._hist = true; } catch (e) {} }
 
     function apply(yy) {
       y = yy;
@@ -411,6 +421,7 @@
     }
     function close(v) {
       if (closed) return; closed = true;
+      if (api._hist) { api._hist = false; skipPop++; try { history.back(); } catch (e) { skipPop--; } }
       H = panel.offsetHeight || H; if (anim) anim.stop();
       wrap.style.pointerEvents = 'none';
       const i = stack.indexOf(api); if (i >= 0) stack.splice(i, 1);

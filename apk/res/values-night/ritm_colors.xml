@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ritm_bg">#000000</color>
+    <color name="ritm_accent">#FF375F</color>
+    <bool name="ritm_light_bars">false</bool>
+</resources>

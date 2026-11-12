@@ -1,0 +1,76 @@
+name: Android APK
+
+# Собирает тестовый APK: оболочка Capacitor, которая открывает сайт приложения.
+# Само приложение обновляется через сайт, пересобирать APK нужно только при изменении папки apk/.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'apk/**'
+      - '.github/workflows/android-apk.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      RITM_BUILD: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Create Android project (Capacitor)
+        run: |
+          set -euxo pipefail
+          mkdir build-apk && cd build-apk
+          npm init -y > /dev/null
+          npm install --no-audit --no-fund @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
+          cp -r ../apk/www www
+          cp ../apk/capacitor.config.json capacitor.config.json
+          npx cap add android
+          python3 ../apk/patch_android.py android
+          npx cap sync android
+          mkdir -p ~/.android
+          cp ../apk/debug.keystore ~/.android/debug.keystore
+
+      - name: Build APK
+        run: |
+          set -euxo pipefail
+          cd build-apk/android
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/ritm.apk"
+          ls -la "$GITHUB_WORKSPACE/ritm.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ritm-apk
+          path: ritm.apk
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          printf '%s\n' \
+            "Тестовая сборка приложения «Ритм» для Android." \
+            "" \
+            "Установка: скачайте ritm.apk на телефон и откройте файл. Android попросит разрешить установку из этого источника." \
+            "Сборка подписана тестовым ключом и не предназначена для публикации в магазине." > notes.md
+          gh release create "apk-${RITM_BUILD}" ritm.apk --title "Ритм для Android, сборка ${RITM_BUILD}" --notes-file notes.md --latest
