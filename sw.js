@@ -1,5 +1,5 @@
 /* Ритм — офлайн-кэш оболочки приложения. Данные пользователя здесь не хранятся. */
-const CACHE = 'ritm-shell-364c8a33';
+const CACHE = 'ritm-shell-cc17eb6c';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-192.png', 'css/tokens.css', 'css/app.css',
   'js/config.js', 'js/core.js', 'js/calc.js', 'js/data.js', 'js/ai.js', 'js/screens-main.js', 'js/screens-food.js', 'js/screens-health.js', 'js/sync.js', 'js/main.js'];
 self.addEventListener('install', (e) => {
