@@ -18,8 +18,8 @@
   ui.aiNote = () => {
     const m = App.ai.mode();
     return m === 'demo' ? h('div', { class: 'note', style: { '--c': 'var(--orange)' } }, h('b', { class: 'h' }, icon('info', 15), 'ИИ не подключён'),
-      'Сейчас показываются примеры ответов. Подключите Claude в профиле, чтобы разбор был по вашим данным.',
-      h('div', { style: 'margin-top:10px' }, h('button', { class: 'btn sm tinted', type: 'button', onclick: () => ui.aiSettings() }, 'Подключить ИИ'))) : null;
+      'Сейчас показываются примеры ответов, а не разбор ваших данных.',
+      h('div', { style: 'margin-top:10px' }, h('button', { class: 'btn sm tinted', type: 'button', style: '--accent:var(--orange)', onclick: () => ui.aiSettings() }, 'Подробнее'))) : null;
   };
   // выбор фото: с камеры или из галереи
   ui.pickPhoto = (o) => {
@@ -255,7 +255,7 @@
             ui.row({ icon: 'target', color: 'var(--orange)', title: 'Белки · Жиры · Углеводы', val: t.p + ' · ' + t.f + ' · ' + t.c + ' г' }),
             ui.row({ icon: 'pencil', color: 'var(--blue)', title: 'Изменить данные', sub: 'Рост, вес, активность, ограничения', onclick: () => ui.profileEdit(() => draw(b)) })),
           h('div', { class: 'list' },
-            ui.row({ icon: 'sparkles', color: 'var(--purple)', title: 'ИИ-помощник', sub: m === 'claude' ? 'Claude подключён' : m === 'key' ? 'Claude по вашему ключу' : 'Демо-режим — не подключён', onclick: () => ui.aiSettings(() => draw(b)) })),
+            ui.row({ icon: 'sparkles', color: 'var(--purple)', title: 'ИИ-помощник', sub: m === 'demo' ? 'Не подключён — показываются примеры' : 'Claude подключён', onclick: () => ui.aiSettings(() => draw(b)) })),
           h('div', { class: 'list' },
             App.sync && App.sync.active() ? ui.row({ icon: 'check', color: 'var(--teal)', title: 'Синхронизация включена', sub: 'Данные хранятся в вашей учётной записи Claude и видны только вам', wrap: true }) : null,
             ui.row({ icon: 'share', color: 'var(--green)', title: 'Резервная копия', sub: 'Сохранить все данные в файл', onclick: () => ui.backup() }),
@@ -300,31 +300,26 @@
   ui.aiSettings = function (done) {
     const ai = App.ai;
     const s = sheet({ title: 'ИИ-помощник', onClose: done, build: (b) => {
+      const card = (ok, title, text) => h('div', { class: 'card', style: 'display:flex;gap:14px;align-items:center' },
+        h('span', { class: 'ico lg', style: { '--c': ok ? 'var(--green)' : 'var(--orange)' } }, icon(ok ? 'check' : 'info', 24)),
+        h('div', null, h('div', { style: 'font-weight:600' }, title), h('div', { class: 'sub' }, text)));
+      const state = h('div');
+      const about = h('p', { class: 'caption' }, 'ИИ читает фото анализов, продуктов и этикеток, составляет меню, программы тренировок и рецепты. В Claude отправляется только то, что нужно для ответа: фото и краткие данные профиля.');
       const draw = () => {
         const m = ai.mode();
-        const state = h('div', { class: 'card', style: 'display:flex;gap:14px;align-items:center' }, h('span', { class: 'ico lg', style: { '--c': m === 'demo' ? 'var(--orange)' : 'var(--green)' } }, icon(m === 'demo' ? 'info' : 'check', 24)),
-          h('div', null, h('div', { style: 'font-weight:600' }, m === 'claude' ? 'Claude подключён' : m === 'key' ? 'Claude работает по вашему ключу' : 'Демо-режим'),
-            h('div', { class: 'sub' }, m === 'claude' ? 'Запросы идут через вашу учётную запись Claude — ключ не нужен.' : m === 'key' ? 'Модель: ' + (ai.MODELS.find((x) => x.id === ai.cfg.model) || {}).t : 'ИИ показывает примеры, а не разбор ваших данных.')));
-        const kids = [state, h('p', { class: 'caption' }, 'ИИ читает фото анализов, продуктов и этикеток, составляет меню, программы тренировок и рецепты. В Claude отправляется только то, что нужно для ответа: фото и краткие данные профиля.')];
-        if (ai.hosted()) {
-          if (m !== 'claude') kids.push(h('div', { class: 'note', style: { '--c': 'var(--orange)' } }, h('b', { class: 'h' }, icon('info', 15), 'Нужно разрешение'), 'При первом обращении Claude спросит разрешение — подтвердите его. Если отказали раньше, обновите страницу.'));
-        } else {
-          const key = h('input', { id: 'ai-key', type: 'password', placeholder: 'sk-ant-…', autocomplete: 'off', value: ai.cfg.key, style: 'text-align:left' });
-          const opts = h('div', { class: 'options' });
-          const drawOpts = () => kidsSet(opts, ...ai.MODELS.map((x) => h('button', { class: 'option' + (ai.cfg.model === x.id ? ' on' : ''), type: 'button', onclick: () => { ai.cfg.model = x.id; ai.saveCfg(); drawOpts(); } },
-            h('div', null, h('div', { class: 't' }, x.t), h('div', { class: 'd' }, x.d)), h('span', { class: 'radio' }, icon('check', 14)))));
-          drawOpts();
-          kids.push(h('div', { class: 'section', style: 'margin-top:8px' }, ui.head('Ключ Claude API')),
-            h('div', { class: 'list' }, h('div', { class: 'field' }, key)),
-            h('p', { class: 'caption' }, 'Ключ создаётся в консоли Anthropic (platform.claude.com) и оплачивается по факту запросов. Он хранится только на этом устройстве и отправляется напрямую в Anthropic.'),
-            h('div', { class: 'btn-row' },
-              h('button', { class: 'btn primary', type: 'button', onclick: () => { ai.cfg.key = key.value.trim(); ai.saveCfg(); draw(); toast(ai.cfg.key ? 'Ключ сохранён' : 'Ключ удалён'); App.refresh(); } }, 'Сохранить'),
-              ai.cfg.key ? h('button', { class: 'btn gray danger', type: 'button', onclick: () => { ai.cfg.key = ''; ai.saveCfg(); draw(); App.refresh(); } }, 'Удалить') : null),
-            h('div', { class: 'section' }, ui.head('Модель')), opts);
-        }
-        kidsSet(b, h('div', { class: 'stack' }, kids));
+        if (m === 'claude') return kidsSet(state, card(true, 'Claude подключён', 'Запросы идут через вашу учётную запись Claude.'));
+        if (ai.hosted()) return kidsSet(state, card(false, 'Нужно разрешение', 'При первом обращении Claude спросит разрешение — подтвердите его. Если отказали раньше, обновите страницу.'));
+        if (!ai.hasServer()) return kidsSet(state, card(false, 'ИИ пока не подключён', 'Сейчас показываются примеры ответов. Ничего вводить не нужно: ИИ заработает сам, когда будет подключён сервер приложения.'));
+        kidsSet(state, card(true, 'Claude подключён', 'Проверяю связь с сервером…'));
+        ai.serverStatus().then((st) => {
+          if (!state.isConnected) return;
+          if (st.ok) kidsSet(state, card(true, 'Claude подключён', st.device ? 'Это устройство подключено. Ничего настраивать не нужно.' : st.enroll ? 'Устройство подключится автоматически при первом запросе.' : 'Сервер работает, но подключение новых устройств закрыто.'));
+          else kidsSet(state, card(false, st.reason === 'network' ? 'Нет связи с сервером ИИ' : 'Сервер ИИ не настроен', st.reason === 'network' ? 'Проверьте интернет и попробуйте ещё раз.' : 'На сервере не задан ключ Claude. Пока показываются примеры.'),
+            h('button', { class: 'btn tinted block', type: 'button', style: 'margin-top:10px', onclick: draw }, icon('refresh', 20), 'Проверить ещё раз'));
+        });
       };
       draw();
+      kidsSet(b, h('div', { class: 'stack' }, state, about));
     } });
   };
 
@@ -343,7 +338,7 @@
           const a = h('a', { href: URL.createObjectURL(new Blob([json], { type: 'application/json' })), download: name }); document.body.appendChild(a); a.click(); a.remove(); toast('Файл сохранён');
         } catch (e) { copy(); }
       };
-      kidsAdd(b, h('div', { class: 'stack' }, h('p', { class: 'caption' }, 'В копии — профиль, дневник, анализы, программы. Ключ ИИ в копию не входит. Храните файл в надёжном месте: в нём данные о здоровье.'), ta,
+      kidsAdd(b, h('div', { class: 'stack' }, h('p', { class: 'caption' }, 'В копии — профиль, дневник, анализы, программы. Храните файл в надёжном месте: в нём данные о здоровье.'), ta,
         h('div', { class: 'btn-row' }, h('button', { class: 'btn primary', type: 'button', onclick: save }, icon('share', 20), 'Сохранить файл'), h('button', { class: 'btn gray', type: 'button', onclick: copy }, 'Скопировать'))));
     } });
   };

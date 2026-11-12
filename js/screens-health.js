@@ -146,7 +146,7 @@
     }).filter(Boolean);
   }
   ui.labAdd = function () {
-    const key = App.ai.mode() === 'key';
+    const key = App.ai.mode() === 'server';
     const s = sheet({ title: 'Добавить анализы', detent: 'auto', build: (b) => {
       const go = (opts) => { s.close(); setTimeout(() => ui.pickPhoto(Object.assign({ onFiles: labFromFiles }, opts)), 160); };
       kidsAdd(b, h('div', { class: 'stack' },

@@ -11,7 +11,7 @@ def write(p, s):
     io.open(os.path.join(ROOT, p), 'w', encoding='utf-8', newline='\n').write(s)
 
 CSS = ['css/tokens.css', 'css/app.css']
-JS = ['js/core.js', 'js/calc.js', 'js/data.js', 'js/ai.js', 'js/screens-main.js', 'js/screens-food.js',
+JS = ['js/config.js', 'js/core.js', 'js/calc.js', 'js/data.js', 'js/ai.js', 'js/screens-main.js', 'js/screens-food.js',
       'js/screens-health.js', 'js/sync.js', 'js/main.js']
 
 ver = hashlib.sha1(''.join(read(p) for p in CSS + JS).encode('utf-8')).hexdigest()[:8]

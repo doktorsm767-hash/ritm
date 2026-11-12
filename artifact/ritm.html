@@ -453,6 +453,12 @@ h1,h2,h3,p{margin:0}
 </style>
 <div id="app"></div>
 <script>
+/* Ритм — настройки развёртывания. Меняются здесь, в одном месте. */
+window.RITM_CONFIG = {
+  // Адрес сервера-посредника для ИИ (server/worker.js). Пока пусто — ИИ в автономной версии показывает примеры.
+  aiServer: ''
+};
+
 /* Ритм — ядро: DOM-помощники, пружинная анимация, хранилище, вкладки, листы, компоненты. */
 (function () {
   'use strict';
@@ -1321,22 +1327,15 @@ h1,h2,h3,p{margin:0}
 })();
 
 /* Ритм — ИИ. Три режима:
-   1) страница открыта на claude.ai — встроенный Claude (capability `sample`), ключ не нужен;
-   2) автономная PWA — официальный SDK Anthropic с ключом пользователя (хранится только на устройстве);
+   1) страница открыта на claude.ai — встроенный Claude (capability `sample`), по подписке пользователя;
+   2) автономное приложение — сервер-посредник (server/worker.js): ключ Claude хранится на сервере,
+      в приложении ничего вводить не нужно, устройство само получает пропуск;
    3) ничего не подключено — демо-ответы, помеченные как пример. */
 (function () {
   'use strict';
   const App = window.App;
-  const CFG_KEY = 'ritm.ai.v1';
-  const SDK_URL = 'https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@0.136.0/+esm';
-  const MODELS = [
-    { id: 'claude-opus-5-5', t: 'Claude Opus 5.5', d: 'Самый точный разбор. Рекомендуется.' },
-    { id: 'claude-sonnet-5-5', t: 'Claude Sonnet 5.5', d: 'Быстрее и вдвое дешевле.' },
-    { id: 'claude-haiku-5-5', t: 'Claude Haiku 5.5', d: 'Самый быстрый и недорогой.' }
-  ];
-  const cfg = { key: '', model: 'claude-opus-5-5' };
-  try { Object.assign(cfg, JSON.parse(localStorage.getItem(CFG_KEY) || '{}')); } catch (e) {}
-  const saveCfg = () => { try { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); } catch (e) {} };
+  const SERVER = String((window.RITM_CONFIG && window.RITM_CONFIG.aiServer) || '').replace(/\/+$/, '');
+  const TOKEN_KEY = 'ritm.ai.device';
 
   let sample = null, imgLimits = null, hosted = false, ready = false;
   const boot = (async () => {
@@ -1351,7 +1350,7 @@ h1,h2,h3,p{margin:0}
     if (App.refresh) App.refresh();
   })();
 
-  const mode = () => (sample ? 'claude' : cfg.key && !hosted ? 'key' : 'demo');
+  const mode = () => (sample ? 'claude' : SERVER && !hosted ? 'server' : 'demo');
   const delay = (ms) => new Promise((r) => setTimeout(r, ms));
   const fail = (msg, code) => { const e = new Error(msg); e.user = msg; e.code = code; return e; };
 
@@ -1364,20 +1363,32 @@ h1,h2,h3,p{margin:0}
     for (const s of tries) { try { return JSON.parse(s); } catch (e) {} }
     throw fail('Ответ ИИ пришёл в неожиданном виде. Попробуйте ещё раз.', 'invalid_json');
   }
-  const SAMPLE_ERR = {
+  const ERR = {
+    // встроенный Claude на claude.ai
     not_granted: 'Вы не разрешили странице обращаться к Claude. Обновите страницу и разрешите доступ.',
     sampling_disabled: 'Claude недоступен для этой учётной записи.',
-    rate_limited: 'Слишком много запросов или исчерпан лимит Claude. Попробуйте позже.',
     session_expired: 'Сессия истекла. Войдите в Claude заново.',
     image_rejected: 'Не получилось прочитать фото. Попробуйте другой снимок в формате JPEG или PNG.',
     images_unavailable: 'Здесь нельзя отправлять фото в Claude. Введите данные вручную.',
-    refused: 'Claude не стал обрабатывать этот запрос. Попробуйте переформулировать.',
-    invalid_json: 'Ответ ИИ пришёл в неожиданном виде. Попробуйте ещё раз.',
     prompt_too_large: 'Слишком много данных для одного запроса.',
+    // сервер приложения
+    not_configured: 'Сервер ИИ ещё не настроен. Попробуйте позже.',
+    enroll_closed: 'Это устройство не подключено к ИИ: подключение новых устройств закрыто.',
+    key_invalid: 'Сервер ИИ не смог обратиться к Claude. Нужно проверить ключ на сервере.',
+    overloaded: 'Claude сейчас перегружен. Попробуйте через минуту.',
+    too_large: 'Фото слишком большие для одного запроса. Отправьте меньше снимков.',
+    origin: 'Сервер ИИ не принимает запросы с этого адреса.',
+    network: 'Нет связи с сервером ИИ. Проверьте интернет.',
+    // общее
+    rate_limited: 'Слишком много запросов. Подождите несколько минут.',
+    refused: 'Claude не стал обрабатывать этот запрос. Попробуйте переформулировать.',
+    truncated: 'Ответ получился слишком длинным. Попробуйте ещё раз.',
+    invalid_json: 'Ответ ИИ пришёл в неожиданном виде. Попробуйте ещё раз.',
     cancelled: 'Запрос отменён.'
   };
+  const GENERIC = 'Не удалось получить ответ ИИ. Попробуйте ещё раз.';
 
-  // фото -> JPEG не больше 1568 px по длинной стороне (для режима с ключом)
+  // фото -> JPEG не больше 1568 px по длинной стороне
   async function toJpegB64(file) {
     const bmp = await createImageBitmap(file);
     const k = Math.min(1, 1568 / Math.max(bmp.width, bmp.height));
@@ -1387,48 +1398,85 @@ h1,h2,h3,p{margin:0}
   }
   const fileB64 = (file) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(file); });
 
-  let sdkPromise = null;
-  const loadSdk = () => sdkPromise || (sdkPromise = import(SDK_URL).then((m) => m.default || m.Anthropic).catch((e) => { sdkPromise = null; throw fail('Не удалось загрузить библиотеку Claude. Проверьте интернет.', 'sdk'); }));
-
-  async function viaKey(prompt, o) {
-    const Anthropic = await loadSdk();
-    const client = new Anthropic({ apiKey: cfg.key, dangerouslyAllowBrowser: true });
+  /* ---------- сервер приложения ---------- */
+  const getToken = () => { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; } };
+  async function serverError(res) {
+    let code = '';
+    try { const j = await res.json(); code = (j && j.error && j.error.code) || ''; } catch (e) {}
+    return fail(ERR[code] || GENERIC, code || 'server');
+  }
+  // пропуск устройства: выдаётся сервером один раз и хранится на устройстве
+  async function enroll(signal) {
+    let res;
+    try { res = await fetch(SERVER + '/enroll', { method: 'POST', signal: signal }); } catch (e) { throw fail(ERR.network, 'network'); }
+    if (!res.ok) throw await serverError(res);
+    const j = await res.json();
+    if (!j || !j.token) throw fail(GENERIC, 'server');
+    try { localStorage.setItem(TOKEN_KEY, j.token); } catch (e) {}
+    return j.token;
+  }
+  // читаем поток ответа Claude (server-sent events) и собираем текст
+  async function readStream(res) {
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    let buf = '', text = '', stop = null, err = null;
+    for (;;) {
+      const part = await reader.read();
+      if (part.done) break;
+      buf += dec.decode(part.value, { stream: true });
+      let i;
+      while ((i = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+        if (line.indexOf('data:') !== 0) continue;
+        let ev; try { ev = JSON.parse(line.slice(5)); } catch (e) { continue; }
+        if (ev.type === 'content_block_delta' && ev.delta && ev.delta.type === 'text_delta') text += ev.delta.text;
+        else if (ev.type === 'message_delta' && ev.delta && ev.delta.stop_reason) stop = ev.delta.stop_reason;
+        else if (ev.type === 'error') err = ev.error || {};
+      }
+    }
+    return { text: text, stop: stop, err: err };
+  }
+  async function viaServer(kind, prompt, o) {
     const content = [];
     for (const f of o.files || []) {
       if (f.type === 'application/pdf') content.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: await fileB64(f) } });
       else content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: await toJpegB64(f) } });
     }
     content.push({ type: 'text', text: prompt });
-    const req = { model: cfg.model, max_tokens: 16000, output_config: { effort: o.effort || 'medium' }, messages: [{ role: 'user', content: content }] };
-    // при отказе по соображениям безопасности сервер сам переключится на запасную модель (кроме Haiku)
-    if (cfg.model !== 'claude-haiku-5-5') { req.betas = ['server-side-fallback-2026-07-01']; req.fallbacks = 'default'; }
-    let res;
+    const body = JSON.stringify(content);
+    const send = async (token) => {
+      try { return await fetch(SERVER + '/ask', { method: 'POST', headers: { 'authorization': 'Bearer ' + token, 'content-type': 'application/json', 'x-ritm-kind': kind }, body: body, signal: o.signal }); }
+      catch (e) { throw fail(o.signal && o.signal.aborted ? ERR.cancelled : ERR.network, o.signal && o.signal.aborted ? 'cancelled' : 'network'); }
+    };
+    let res = await send(getToken() || (await enroll(o.signal)));
+    if (res.status === 401) res = await send(await enroll(o.signal));   // пропуск устарел (например, сменился ключ на сервере) — получаем новый
+    if (!res.ok) throw await serverError(res);
+    let out;
+    try { out = await readStream(res); } catch (e) { throw fail(ERR.network, 'network'); }
+    if (out.err) throw fail(out.err.type === 'overloaded_error' ? ERR.overloaded : GENERIC, 'stream');
+    if (out.stop === 'refusal') throw fail(ERR.refused, 'refused');
+    if (out.stop === 'max_tokens') throw fail(ERR.truncated, 'truncated');
+    return parseJSON(out.text);
+  }
+  // проверка связи с сервером для экрана настроек
+  async function serverStatus() {
+    if (!SERVER) return { ok: false, reason: 'none' };
     try {
-      res = req.betas ? await client.beta.messages.create(req, { signal: o.signal }) : await client.messages.create(req, { signal: o.signal });
-    } catch (e) {
-      if (o.signal && o.signal.aborted) throw fail(SAMPLE_ERR.cancelled, 'cancelled');
-      if (Anthropic.AuthenticationError && e instanceof Anthropic.AuthenticationError) throw fail('Ключ API не подошёл. Проверьте его в настройках ИИ.', 'auth');
-      if (Anthropic.PermissionDeniedError && e instanceof Anthropic.PermissionDeniedError) throw fail('У ключа нет доступа к этой модели.', 'auth');
-      if (Anthropic.RateLimitError && e instanceof Anthropic.RateLimitError) throw fail(SAMPLE_ERR.rate_limited, 'rate_limited');
-      if (Anthropic.APIConnectionError && e instanceof Anthropic.APIConnectionError) throw fail('Нет связи с сервером Claude. Проверьте интернет.', 'network');
-      if (Anthropic.APIError && e instanceof Anthropic.APIError) throw fail(e.status >= 500 ? 'Сервис Claude сейчас перегружен. Попробуйте через минуту.' : 'Claude отклонил запрос (' + (e.status || 'ошибка') + ').', 'api');
-      throw fail('Не удалось получить ответ ИИ. Попробуйте ещё раз.', 'unknown');
-    }
-    if (res.stop_reason === 'refusal') throw fail(SAMPLE_ERR.refused, 'refused');
-    if (res.stop_reason === 'max_tokens') throw fail('Ответ получился слишком длинным. Попробуйте ещё раз.', 'truncated');
-    return parseJSON((res.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('\n'));
+      const res = await fetch(SERVER + '/', { cache: 'no-store' }), j = await res.json();
+      return { ok: !!(j && j.ok && j.configured), configured: !!(j && j.configured), enroll: !!(j && j.enroll), device: !!getToken() };
+    } catch (e) { return { ok: false, reason: 'network' }; }
   }
 
+  /* ---------- встроенный Claude на claude.ai ---------- */
   async function viaSample(prompt, o) {
     const opts = { cache: false, modelTier: o.tier || 'default' };
     if (o.signal) opts.signal = o.signal;
     if (o.files && o.files.length) {
-      if (!imgLimits) throw fail(SAMPLE_ERR.images_unavailable, 'images_unavailable');
+      if (!imgLimits) throw fail(ERR.images_unavailable, 'images_unavailable');
       if (o.files.some((f) => f.type === 'application/pdf')) throw fail('PDF здесь не читается. Сделайте снимок экрана или фото бланка.', 'pdf');
       opts.images = o.files.slice(0, imgLimits.maxCount || 4);
     }
     try { return await sample.json(prompt, opts); }
-    catch (e) { throw fail(SAMPLE_ERR[e && e.code] || 'Не удалось получить ответ ИИ. Попробуйте ещё раз.', e && e.code); }
+    catch (e) { throw fail(ERR[e && e.code] || GENERIC, e && e.code); }
   }
 
   // главный вызов: вернёт { data, demo }
@@ -1437,10 +1485,10 @@ h1,h2,h3,p{margin:0}
     await Promise.race([boot, delay(o.files ? 11000 : 3000)]);
     const m = mode();
     if (m === 'claude') return { data: await viaSample(prompt, o), demo: false };
-    if (m === 'key') return { data: await viaKey(prompt, o), demo: false };
+    if (m === 'server') return { data: await viaServer(kind, prompt, o), demo: false };
     await delay(1300);
     const d = App.data.DEMO[kind];
-    if (!d) throw fail('ИИ не подключён. Откройте профиль → «ИИ-помощник».', 'no_ai');
+    if (!d) throw fail('ИИ пока не подключён.', 'no_ai');
     return { data: d(o.demoArg), demo: true };
   }
 
@@ -1467,7 +1515,7 @@ h1,h2,h3,p{margin:0}
   const J = 'Ответь ТОЛЬКО одним JSON-объектом без пояснений. ';
 
   const api = {
-    MODELS, cfg, saveCfg, mode, ready: () => ready, hosted: () => hosted, canPhoto: () => (mode() === 'claude' ? !!imgLimits : true), who, labFlags,
+    mode, ready: () => ready, hosted: () => hosted, hasServer: () => !!SERVER, serverStatus, canPhoto: () => (mode() === 'claude' ? !!imgLimits : true), who, labFlags,
 
     parseLab: (files) => ask('lab',
       'На фото — бланк лабораторных анализов человека, который ведёт личный дневник здоровья. Извлеки данные. ' + J +
@@ -1555,8 +1603,8 @@ h1,h2,h3,p{margin:0}
   ui.aiNote = () => {
     const m = App.ai.mode();
     return m === 'demo' ? h('div', { class: 'note', style: { '--c': 'var(--orange)' } }, h('b', { class: 'h' }, icon('info', 15), 'ИИ не подключён'),
-      'Сейчас показываются примеры ответов. Подключите Claude в профиле, чтобы разбор был по вашим данным.',
-      h('div', { style: 'margin-top:10px' }, h('button', { class: 'btn sm tinted', type: 'button', onclick: () => ui.aiSettings() }, 'Подключить ИИ'))) : null;
+      'Сейчас показываются примеры ответов, а не разбор ваших данных.',
+      h('div', { style: 'margin-top:10px' }, h('button', { class: 'btn sm tinted', type: 'button', style: '--accent:var(--orange)', onclick: () => ui.aiSettings() }, 'Подробнее'))) : null;
   };
   // выбор фото: с камеры или из галереи
   ui.pickPhoto = (o) => {
@@ -1792,7 +1840,7 @@ h1,h2,h3,p{margin:0}
             ui.row({ icon: 'target', color: 'var(--orange)', title: 'Белки · Жиры · Углеводы', val: t.p + ' · ' + t.f + ' · ' + t.c + ' г' }),
             ui.row({ icon: 'pencil', color: 'var(--blue)', title: 'Изменить данные', sub: 'Рост, вес, активность, ограничения', onclick: () => ui.profileEdit(() => draw(b)) })),
           h('div', { class: 'list' },
-            ui.row({ icon: 'sparkles', color: 'var(--purple)', title: 'ИИ-помощник', sub: m === 'claude' ? 'Claude подключён' : m === 'key' ? 'Claude по вашему ключу' : 'Демо-режим — не подключён', onclick: () => ui.aiSettings(() => draw(b)) })),
+            ui.row({ icon: 'sparkles', color: 'var(--purple)', title: 'ИИ-помощник', sub: m === 'demo' ? 'Не подключён — показываются примеры' : 'Claude подключён', onclick: () => ui.aiSettings(() => draw(b)) })),
           h('div', { class: 'list' },
             App.sync && App.sync.active() ? ui.row({ icon: 'check', color: 'var(--teal)', title: 'Синхронизация включена', sub: 'Данные хранятся в вашей учётной записи Claude и видны только вам', wrap: true }) : null,
             ui.row({ icon: 'share', color: 'var(--green)', title: 'Резервная копия', sub: 'Сохранить все данные в файл', onclick: () => ui.backup() }),
@@ -1837,31 +1885,26 @@ h1,h2,h3,p{margin:0}
   ui.aiSettings = function (done) {
     const ai = App.ai;
     const s = sheet({ title: 'ИИ-помощник', onClose: done, build: (b) => {
+      const card = (ok, title, text) => h('div', { class: 'card', style: 'display:flex;gap:14px;align-items:center' },
+        h('span', { class: 'ico lg', style: { '--c': ok ? 'var(--green)' : 'var(--orange)' } }, icon(ok ? 'check' : 'info', 24)),
+        h('div', null, h('div', { style: 'font-weight:600' }, title), h('div', { class: 'sub' }, text)));
+      const state = h('div');
+      const about = h('p', { class: 'caption' }, 'ИИ читает фото анализов, продуктов и этикеток, составляет меню, программы тренировок и рецепты. В Claude отправляется только то, что нужно для ответа: фото и краткие данные профиля.');
       const draw = () => {
         const m = ai.mode();
-        const state = h('div', { class: 'card', style: 'display:flex;gap:14px;align-items:center' }, h('span', { class: 'ico lg', style: { '--c': m === 'demo' ? 'var(--orange)' : 'var(--green)' } }, icon(m === 'demo' ? 'info' : 'check', 24)),
-          h('div', null, h('div', { style: 'font-weight:600' }, m === 'claude' ? 'Claude подключён' : m === 'key' ? 'Claude работает по вашему ключу' : 'Демо-режим'),
-            h('div', { class: 'sub' }, m === 'claude' ? 'Запросы идут через вашу учётную запись Claude — ключ не нужен.' : m === 'key' ? 'Модель: ' + (ai.MODELS.find((x) => x.id === ai.cfg.model) || {}).t : 'ИИ показывает примеры, а не разбор ваших данных.')));
-        const kids = [state, h('p', { class: 'caption' }, 'ИИ читает фото анализов, продуктов и этикеток, составляет меню, программы тренировок и рецепты. В Claude отправляется только то, что нужно для ответа: фото и краткие данные профиля.')];
-        if (ai.hosted()) {
-          if (m !== 'claude') kids.push(h('div', { class: 'note', style: { '--c': 'var(--orange)' } }, h('b', { class: 'h' }, icon('info', 15), 'Нужно разрешение'), 'При первом обращении Claude спросит разрешение — подтвердите его. Если отказали раньше, обновите страницу.'));
-        } else {
-          const key = h('input', { id: 'ai-key', type: 'password', placeholder: 'sk-ant-…', autocomplete: 'off', value: ai.cfg.key, style: 'text-align:left' });
-          const opts = h('div', { class: 'options' });
-          const drawOpts = () => kidsSet(opts, ...ai.MODELS.map((x) => h('button', { class: 'option' + (ai.cfg.model === x.id ? ' on' : ''), type: 'button', onclick: () => { ai.cfg.model = x.id; ai.saveCfg(); drawOpts(); } },
-            h('div', null, h('div', { class: 't' }, x.t), h('div', { class: 'd' }, x.d)), h('span', { class: 'radio' }, icon('check', 14)))));
-          drawOpts();
-          kids.push(h('div', { class: 'section', style: 'margin-top:8px' }, ui.head('Ключ Claude API')),
-            h('div', { class: 'list' }, h('div', { class: 'field' }, key)),
-            h('p', { class: 'caption' }, 'Ключ создаётся в консоли Anthropic (platform.claude.com) и оплачивается по факту запросов. Он хранится только на этом устройстве и отправляется напрямую в Anthropic.'),
-            h('div', { class: 'btn-row' },
-              h('button', { class: 'btn primary', type: 'button', onclick: () => { ai.cfg.key = key.value.trim(); ai.saveCfg(); draw(); toast(ai.cfg.key ? 'Ключ сохранён' : 'Ключ удалён'); App.refresh(); } }, 'Сохранить'),
-              ai.cfg.key ? h('button', { class: 'btn gray danger', type: 'button', onclick: () => { ai.cfg.key = ''; ai.saveCfg(); draw(); App.refresh(); } }, 'Удалить') : null),
-            h('div', { class: 'section' }, ui.head('Модель')), opts);
-        }
-        kidsSet(b, h('div', { class: 'stack' }, kids));
+        if (m === 'claude') return kidsSet(state, card(true, 'Claude подключён', 'Запросы идут через вашу учётную запись Claude.'));
+        if (ai.hosted()) return kidsSet(state, card(false, 'Нужно разрешение', 'При первом обращении Claude спросит разрешение — подтвердите его. Если отказали раньше, обновите страницу.'));
+        if (!ai.hasServer()) return kidsSet(state, card(false, 'ИИ пока не подключён', 'Сейчас показываются примеры ответов. Ничего вводить не нужно: ИИ заработает сам, когда будет подключён сервер приложения.'));
+        kidsSet(state, card(true, 'Claude подключён', 'Проверяю связь с сервером…'));
+        ai.serverStatus().then((st) => {
+          if (!state.isConnected) return;
+          if (st.ok) kidsSet(state, card(true, 'Claude подключён', st.device ? 'Это устройство подключено. Ничего настраивать не нужно.' : st.enroll ? 'Устройство подключится автоматически при первом запросе.' : 'Сервер работает, но подключение новых устройств закрыто.'));
+          else kidsSet(state, card(false, st.reason === 'network' ? 'Нет связи с сервером ИИ' : 'Сервер ИИ не настроен', st.reason === 'network' ? 'Проверьте интернет и попробуйте ещё раз.' : 'На сервере не задан ключ Claude. Пока показываются примеры.'),
+            h('button', { class: 'btn tinted block', type: 'button', style: 'margin-top:10px', onclick: draw }, icon('refresh', 20), 'Проверить ещё раз'));
+        });
       };
       draw();
+      kidsSet(b, h('div', { class: 'stack' }, state, about));
     } });
   };
 
@@ -1880,7 +1923,7 @@ h1,h2,h3,p{margin:0}
           const a = h('a', { href: URL.createObjectURL(new Blob([json], { type: 'application/json' })), download: name }); document.body.appendChild(a); a.click(); a.remove(); toast('Файл сохранён');
         } catch (e) { copy(); }
       };
-      kidsAdd(b, h('div', { class: 'stack' }, h('p', { class: 'caption' }, 'В копии — профиль, дневник, анализы, программы. Ключ ИИ в копию не входит. Храните файл в надёжном месте: в нём данные о здоровье.'), ta,
+      kidsAdd(b, h('div', { class: 'stack' }, h('p', { class: 'caption' }, 'В копии — профиль, дневник, анализы, программы. Храните файл в надёжном месте: в нём данные о здоровье.'), ta,
         h('div', { class: 'btn-row' }, h('button', { class: 'btn primary', type: 'button', onclick: save }, icon('share', 20), 'Сохранить файл'), h('button', { class: 'btn gray', type: 'button', onclick: copy }, 'Скопировать'))));
     } });
   };
@@ -2463,7 +2506,7 @@ h1,h2,h3,p{margin:0}
     }).filter(Boolean);
   }
   ui.labAdd = function () {
-    const key = App.ai.mode() === 'key';
+    const key = App.ai.mode() === 'server';
     const s = sheet({ title: 'Добавить анализы', detent: 'auto', build: (b) => {
       const go = (opts) => { s.close(); setTimeout(() => ui.pickPhoto(Object.assign({ onFiles: labFromFiles }, opts)), 160); };
       kidsAdd(b, h('div', { class: 'stack' },
