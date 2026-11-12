@@ -3,6 +3,7 @@
   'use strict';
   const App = window.App, { h, icon, store, calc, nf, ring, bar, countUp, sheet, toast, haptic } = App;
   const ui = App.ui;
+  const kidsSet = App.kidsSet, kidsAdd = App.kidsAdd;
 
   /* ---------- общие кирпичики ---------- */
   ui.head = (title, link, onLink) => h('div', { class: 'section-head' }, h('h2', null, title), link ? h('button', { class: 'link', type: 'button', onclick: onLink }, link) : null);
@@ -42,7 +43,7 @@
     const option = (o, on, pick) => h('button', { class: 'option' + (on ? ' on' : ''), type: 'button', onclick: pick },
       o.icon ? h('span', { class: 'ico lg soft', style: { '--c': o.c || 'var(--accent)' } }, icon(o.icon, 24)) : null,
       h('div', null, h('div', { class: 't' }, o.t), o.d ? h('div', { class: 'd' }, o.d) : null), h('span', { class: 'radio' }, icon('check', 14)));
-    const pickOne = (list, key, wrap) => { const box = h('div', { class: 'options' }); const draw = () => box.replaceChildren(...list.map((o) => option(o, d[key] === o.id, () => { d[key] = o.id; haptic(6); draw(); if (wrap) wrap(); }))); draw(); return box; };
+    const pickOne = (list, key, wrap) => { const box = h('div', { class: 'options' }); const draw = () => kidsSet(box, ...list.map((o) => option(o, d[key] === o.id, () => { d[key] = o.id; haptic(6); draw(); if (wrap) wrap(); }))); draw(); return box; };
 
     const steps = [
       { welcome: true },
@@ -50,8 +51,8 @@
         const name = h('input', { class: 'input-big', id: 'ob-name', placeholder: 'Ваше имя', value: d.name, autocomplete: 'given-name', maxlength: '30', oninput: (e) => { d.name = e.target.value; } });
         return [name, pickOne([{ id: 'm', t: 'Мужчина' }, { id: 'f', t: 'Женщина' }], 'sex')];
       } },
-      { t: 'Сколько вам лет?', lead: 'С возрастом обмен веществ меняется — учтём это в расчёте.', build: () => App.ruler({ min: 16, max: 90, value: year - d.birthYear, unit: ' лет', major: 5, label: 'Возраст', onChange: (v) => { d.birthYear = year - v; } }) },
-      { t: 'Ваш рост', lead: 'Прокрутите линейку.', build: () => App.ruler({ min: 130, max: 215, value: d.height, unit: ' см', label: 'Рост', onChange: (v) => { d.height = v; } }) },
+      { t: 'Сколько вам лет?', lead: 'С возрастом обмен веществ меняется — учтём это в расчёте.', build: () => App.ruler({ min: 16, max: 90, value: year - d.birthYear, unit: (v) => App.plural(v, 'год', 'года', 'лет'), major: 5, label: 'Возраст', onChange: (v) => { d.birthYear = year - v; } }) },
+      { t: 'Ваш рост', lead: 'Нужен для расчёта обмена веществ и индекса массы тела.', build: () => App.ruler({ min: 130, max: 215, value: d.height, unit: ' см', label: 'Рост', onChange: (v) => { d.height = v; } }) },
       { t: 'Ваш вес сейчас', lead: 'Лучше взвеситься утром натощак.', build: () => App.ruler({ min: 35, max: 200, step: 0.1, decimals: 1, value: d.weight, unit: ' кг', label: 'Вес', onChange: (v) => { d.weight = v; } }) },
       { t: 'Насколько вы активны?', lead: 'Выберите то, что ближе к обычной неделе.', build: () => pickOne(calc.ACTIVITY, 'activity') },
       { t: 'Какая у вас цель?', lead: 'От неё зависят калории, БЖУ, меню и тренировки.', build: () => pickOne(calc.GOALS, 'goal') },
@@ -62,7 +63,7 @@
         if (paces.indexOf(d.pace) < 0) d.pace = 0.5;
         const upd = () => {
           const t = calc.targets(d), f = calc.forecast(d, t);
-          fc.replaceChildren(h('b', { class: 'h' }, icon('calendar', 15), 'Прогноз'), f ? 'Примерно ' + nf(f.rate, 2) + ' кг в неделю — цель к ' + f.date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) + '. ' : 'Укажите целевой вес. ',
+          kidsSet(fc, h('b', { class: 'h' }, icon('calendar', 15), 'Прогноз'), f ? 'Примерно ' + nf(f.rate, 2) + ' кг в неделю — цель к ' + f.date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) + '. ' : 'Укажите целевой вес. ',
             d.goal === 'lose' && d.pace >= 0.75 ? 'Быстрый темп сложнее удержать: комфортнее 0,5 кг в неделю.' : 'Плавный темп помогает сохранить результат.');
         };
         upd();
@@ -120,14 +121,14 @@
     function draw() {
       while (steps[step].skip && steps[step].skip()) step += dir;
       const s = steps[step], last = step === steps.length - 1;
-      top.replaceChildren(step > 0 ? h('button', { class: 'icon-btn plain', type: 'button', 'aria-label': 'Назад', onclick: () => { dir = -1; step--; draw(); } }, icon('chevL', 22)) : h('span', { style: 'width:36px' }),
+      kidsSet(top, step > 0 ? h('button', { class: 'icon-btn plain', type: 'button', 'aria-label': 'Назад', onclick: () => { dir = -1; step--; draw(); } }, icon('chevL', 22)) : h('span', { style: 'width:36px' }),
         step > 0 ? h('div', { class: 'ob-progress' }, prog) : h('span', { style: 'flex:1' }), h('span', { style: 'width:28px' }));
       const to = step / (steps.length - 1);
       App.spring({ from: progVal, to: to, response: 0.5, damping: 1, precision: 0.002, onUpdate: (v) => { progVal = v; prog.style.transform = 'scaleX(' + v + ')'; } });
-      body.replaceChildren(...(s.welcome ? [welcomeView()] : s.result ? resultView() : [h('h1', null, s.t), s.lead ? h('p', { class: 'lead' }, s.lead) : null].concat(s.build())));
+      kidsSet(body, ...(s.welcome ? [welcomeView()] : s.result ? resultView() : [h('h1', null, s.t), s.lead ? h('p', { class: 'lead' }, s.lead) : null].concat(s.build())));
       body.scrollTop = 0;
       if (!App.still() && body.animate) body.animate([{ opacity: 0, transform: 'translateX(' + 28 * dir + 'px)' }, { opacity: 1, transform: 'none' }], { duration: 340, easing: 'cubic-bezier(.2,.8,.2,1)' });
-      foot.replaceChildren(
+      kidsSet(foot, 
         h('button', { class: 'btn primary block', type: 'button', onclick: () => { haptic(8); if (last) return finish(); dir = 1; step++; draw(); } }, s.welcome ? 'Начать' : last ? 'Начать пользоваться' : 'Далее'),
         s.welcome ? h('button', { class: 'btn plain block', type: 'button', onclick: () => { App.data.seedDemo(); api.close(); App.go('today', { reset: true }); toast('Загружен пример', { icon: 'sparkles', color: 'var(--purple)' }); } }, 'Посмотреть на примере') : null);
     }
@@ -241,7 +242,7 @@
     let api;
     const draw = (b) => {
       const s = store.state, p = s.profile, t = s.targets, bm = calc.bmi(p), bi = calc.bmiInfo(bm), goal = calc.GOALS.find((g) => g.id === p.goal), m = App.ai.mode();
-      b.replaceChildren(
+      kidsSet(b, 
         h('div', { style: 'display:flex;flex-direction:column;align-items:center;gap:8px;padding:6px 0 18px' },
           h('div', { class: 'avatar', style: 'width:84px;height:84px;font-size:36px' }, p.name ? p.name.charAt(0).toUpperCase() : icon('person', 40)),
           h('div', { style: 'font-size:24px;font-weight:700' }, p.name || 'Профиль'),
@@ -279,7 +280,7 @@
     };
     f.allergies.value = p.allergies || '';
     const s = sheet({ title: 'Мои данные', foot: true, build: (b, api) => {
-      b.append(h('div', { class: 'stack' },
+      kidsAdd(b, h('div', { class: 'stack' },
         h('div', { class: 'list' }, field('Имя', f.name), field('Пол', f.sex), field('Возраст', f.age, 'лет'), field('Рост', f.height, 'см'), field('Вес', f.weight, 'кг')),
         h('div', { class: 'list' }, field('Активность', f.activity), field('Цель', f.goal), field('Целевой вес', f.target, 'кг'), field('Темп', f.pace)),
         h('div', { class: 'list' }, h('div', { class: 'field col' }, h('label', { for: 'pe-allergies' }, 'Исключить из питания'), f.allergies)),
@@ -310,7 +311,7 @@
         } else {
           const key = h('input', { id: 'ai-key', type: 'password', placeholder: 'sk-ant-…', autocomplete: 'off', value: ai.cfg.key, style: 'text-align:left' });
           const opts = h('div', { class: 'options' });
-          const drawOpts = () => opts.replaceChildren(...ai.MODELS.map((x) => h('button', { class: 'option' + (ai.cfg.model === x.id ? ' on' : ''), type: 'button', onclick: () => { ai.cfg.model = x.id; ai.saveCfg(); drawOpts(); } },
+          const drawOpts = () => kidsSet(opts, ...ai.MODELS.map((x) => h('button', { class: 'option' + (ai.cfg.model === x.id ? ' on' : ''), type: 'button', onclick: () => { ai.cfg.model = x.id; ai.saveCfg(); drawOpts(); } },
             h('div', null, h('div', { class: 't' }, x.t), h('div', { class: 'd' }, x.d)), h('span', { class: 'radio' }, icon('check', 14)))));
           drawOpts();
           kids.push(h('div', { class: 'section', style: 'margin-top:8px' }, ui.head('Ключ Claude API')),
@@ -321,7 +322,7 @@
               ai.cfg.key ? h('button', { class: 'btn gray danger', type: 'button', onclick: () => { ai.cfg.key = ''; ai.saveCfg(); draw(); App.refresh(); } }, 'Удалить') : null),
             h('div', { class: 'section' }, ui.head('Модель')), opts);
         }
-        b.replaceChildren(h('div', { class: 'stack' }, kids));
+        kidsSet(b, h('div', { class: 'stack' }, kids));
       };
       draw();
     } });
@@ -342,7 +343,7 @@
           const a = h('a', { href: URL.createObjectURL(new Blob([json], { type: 'application/json' })), download: name }); document.body.appendChild(a); a.click(); a.remove(); toast('Файл сохранён');
         } catch (e) { copy(); }
       };
-      b.append(h('div', { class: 'stack' }, h('p', { class: 'caption' }, 'В копии — профиль, дневник, анализы, программы. Ключ ИИ в копию не входит. Храните файл в надёжном месте: в нём данные о здоровье.'), ta,
+      kidsAdd(b, h('div', { class: 'stack' }, h('p', { class: 'caption' }, 'В копии — профиль, дневник, анализы, программы. Ключ ИИ в копию не входит. Храните файл в надёжном месте: в нём данные о здоровье.'), ta,
         h('div', { class: 'btn-row' }, h('button', { class: 'btn primary', type: 'button', onclick: save }, icon('share', 20), 'Сохранить файл'), h('button', { class: 'btn gray', type: 'button', onclick: copy }, 'Скопировать'))));
     } });
   };

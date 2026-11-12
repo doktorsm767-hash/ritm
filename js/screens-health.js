@@ -3,6 +3,7 @@
   'use strict';
   const App = window.App, { h, icon, store, calc, nf, ring, sheet, toast, haptic, uid } = App;
   const ui = App.ui, D = App.data;
+  const kidsSet = App.kidsSet, kidsAdd = App.kidsAdd;
   const N = (v) => { const n = App.num(v); return n == null ? 0 : n; };
   const sortDesc = (a, k) => a.slice().sort((x, y) => (x[k] < y[k] ? 1 : x[k] > y[k] ? -1 : 0));
   const noteBox = (c, ic, title, kids) => h('div', { class: 'note', style: { '--c': c } }, h('b', { class: 'h' }, icon(ic, 15), title), kids);
@@ -37,7 +38,7 @@
     const p = store.state.profile, o = { place: p.place || 'home', level: p.level || 'beginner', days: p.trainDays || 3, limits: p.limits || '' };
     const s = sheet({ title: 'Программа', build: (b) => {
       const places = h('div', { class: 'options' });
-      const drawP = () => places.replaceChildren(...[{ id: 'home', t: 'Дома', d: 'Без инвентаря, с весом тела' }, { id: 'gym', t: 'В зале', d: 'Штанга, гантели, тренажёры' }].map((x) => h('button', { class: 'option' + (o.place === x.id ? ' on' : ''), type: 'button', onclick: () => { o.place = x.id; haptic(6); drawP(); } },
+      const drawP = () => kidsSet(places, ...[{ id: 'home', t: 'Дома', d: 'Без инвентаря, с весом тела' }, { id: 'gym', t: 'В зале', d: 'Штанга, гантели, тренажёры' }].map((x) => h('button', { class: 'option' + (o.place === x.id ? ' on' : ''), type: 'button', onclick: () => { o.place = x.id; haptic(6); drawP(); } },
         h('div', null, h('div', { class: 't' }, x.t), h('div', { class: 'd' }, x.d)), h('span', { class: 'radio' }, icon('check', 14))))); drawP();
       const limits = h('textarea', { class: 'input-big', id: 'tr-limits', rows: '2', placeholder: 'Травмы и ограничения, например: болит колено' }); limits.value = o.limits;
       const save = (plan, demo) => {
@@ -48,8 +49,8 @@
         Object.assign(store.state.profile, { place: o.place, level: o.level, trainDays: o.days, limits: o.limits });
         store.commit(); s.close(); App.go('train', { keep: true }); toast(demo ? 'Показана базовая программа' : 'Программа готова', { icon: 'dumbbell', color: 'var(--orange)' }); return true;
       };
-      const start = () => { o.limits = limits.value.trim(); ui.runAI(b, 'Подбираю упражнения…', () => App.ai.trainPlan(o), (d, demo) => { if (!save(d, demo)) b.replaceChildren(ui.errorView('ИИ вернул пустую программу. Попробуйте ещё раз.', start)); }); };
-      b.append(h('div', { class: 'stack' },
+      const start = () => { o.limits = limits.value.trim(); ui.runAI(b, 'Подбираю упражнения…', () => App.ai.trainPlan(o), (d, demo) => { if (!save(d, demo)) kidsSet(b, ui.errorView('ИИ вернул пустую программу. Попробуйте ещё раз.', start)); }); };
+      kidsAdd(b, h('div', { class: 'stack' },
         h('div', null, h('div', { class: 'caption', style: 'margin-bottom:6px' }, 'Где занимаетесь'), places),
         h('div', null, h('div', { class: 'caption', style: 'margin-bottom:6px' }, 'Уровень'), App.seg([{ id: 'beginner', label: 'Новичок' }, { id: 'middle', label: 'Средний' }, { id: 'advanced', label: 'Опытный' }], o.level, (v) => { o.level = v; })),
         h('div', null, h('div', { class: 'caption', style: 'margin-bottom:6px' }, 'Тренировок в неделю'), App.seg([2, 3, 4, 5].map((n) => ({ id: n, label: String(n) })), o.days, (v) => { o.days = v; })),
@@ -74,23 +75,23 @@
       const count = () => done.reduce((a, x) => a + x.filter(Boolean).length, 0);
       const fmt = (sec) => Math.floor(sec / 60) + ':' + App.pad(sec % 60);
       const paintRest = () => {
-        if (!rest) return restBox.replaceChildren();
+        if (!rest) return kidsSet(restBox);
         const leftS = Math.max(0, Math.ceil((rest.until - Date.now()) / 1000));
-        if (!leftS) { rest = null; haptic([60, 40, 60]); restBox.replaceChildren(); return toast('Отдых окончен — следующий подход', { icon: 'bolt', color: 'var(--orange)' }); }
+        if (!leftS) { rest = null; haptic([60, 40, 60]); kidsSet(restBox); return toast('Отдых окончен — следующий подход', { icon: 'bolt', color: 'var(--orange)' }); }
         const r = ring({ size: 34, stroke: 5, value: leftS / rest.total, color: 'var(--orange)', id: 'rest' }); App.memo.rest = leftS / rest.total;
-        restBox.replaceChildren(h('div', { class: 'timer-pill', style: 'margin-bottom:10px' }, r, h('div', { style: 'flex:1' }, h('div', { style: 'font-weight:700' }, 'Отдых ' + fmt(leftS)), h('div', { style: 'font-size:12px;opacity:.7' }, 'Дышите ровно')),
+        kidsSet(restBox, h('div', { class: 'timer-pill', style: 'margin-bottom:10px' }, r, h('div', { style: 'flex:1' }, h('div', { style: 'font-weight:700' }, 'Отдых ' + fmt(leftS)), h('div', { style: 'font-size:12px;opacity:.7' }, 'Дышите ровно')),
           h('button', { class: 'btn sm', type: 'button', style: 'background:rgba(128,128,128,.3);color:inherit', onclick: () => { rest = null; paintRest(); } }, 'Пропустить')));
       };
       const paint = () => { const c = count(); progress.textContent = 'Выполнено ' + c + ' из ' + total + ' ' + App.plural(total, 'подхода', 'подходов', 'подходов'); };
       tick = setInterval(() => { clock.textContent = fmt(Math.floor((Date.now() - started) / 1000)); if (rest) paintRest(); }, 500);
-      b.append(h('div', { class: 'stack' }, day.focus ? h('p', { class: 'caption' }, 'Акцент: ' + day.focus + '. Перед началом — 5 минут разминки.') : null,
+      kidsAdd(b, h('div', { class: 'stack' }, day.focus ? h('p', { class: 'caption' }, 'Акцент: ' + day.focus + '. Перед началом — 5 минут разминки.') : null,
         h('div', { class: 'list' }, day.exercises.map((e, i) => h('div', { class: 'ex' },
           h('div', { class: 'n' }, h('b', null, e.name), h('span', null, e.sets + ' × ' + e.reps + (e.rest ? ' · отдых ' + e.rest + ' с' : '')), e.tip ? h('span', { style: 'display:block;margin-top:3px' }, e.tip) : null),
           h('div', { class: 'sets' }, done[i].map((v, j) => { const btn = h('button', { class: 'set', type: 'button', 'aria-label': 'Подход ' + (j + 1), onclick: () => {
-            done[i][j] = !done[i][j]; btn.classList.toggle('on', done[i][j]); btn.replaceChildren(done[i][j] ? icon('check', 15) : String(j + 1)); haptic(12); paint();
+            done[i][j] = !done[i][j]; btn.classList.toggle('on', done[i][j]); kidsSet(btn, done[i][j] ? icon('check', 15) : String(j + 1)); haptic(12); paint();
             if (done[i][j] && count() < total) { rest = { total: e.rest || 60, until: Date.now() + (e.rest || 60) * 1000 }; App.memo.rest = 1; paintRest(); } } }, String(j + 1)); return btn; })))))));
       paint();
-      api.foot.append(restBox, progress, h('button', { class: 'btn primary block', type: 'button', onclick: async () => {
+      kidsAdd(api.foot, restBox, progress, h('button', { class: 'btn primary block', type: 'button', onclick: async () => {
         if (count() < total && !(await App.confirm({ title: 'Завершить тренировку?', text: 'Выполнены не все подходы. Тренировка всё равно будет засчитана.', ok: 'Завершить' }))) return;
         store.state.workouts.push({ id: uid(), date: App.dkey(), day: idx, title: day.title, minutes: Math.max(1, Math.round((Date.now() - started) / 60000)) });
         store.commit(); s.close(); toast('Тренировка засчитана', { icon: 'flame', color: 'var(--orange)' });
@@ -148,7 +149,7 @@
     const key = App.ai.mode() === 'key';
     const s = sheet({ title: 'Добавить анализы', detent: 'auto', build: (b) => {
       const go = (opts) => { s.close(); setTimeout(() => ui.pickPhoto(Object.assign({ onFiles: labFromFiles }, opts)), 160); };
-      b.append(h('div', { class: 'stack' },
+      kidsAdd(b, h('div', { class: 'stack' },
         h('div', { class: 'list' },
           ui.row({ icon: 'camera', color: 'var(--purple)', title: 'Сфотографировать бланк', sub: 'ИИ распознает показатели и объяснит', onclick: () => go({ capture: true, multiple: true }) }),
           ui.row({ icon: 'photo', color: 'var(--blue)', title: key ? 'Выбрать фото или PDF' : 'Выбрать фото или скриншот', sub: 'Из галереи, можно несколько страниц', onclick: () => go({ multiple: true, accept: key ? 'image/jpeg,image/png,image/webp,application/pdf' : 'image/jpeg,image/png,image/webp' }) }),
@@ -160,7 +161,7 @@
   function labFromFiles(files) {
     const s = sheet({ title: 'Разбор анализов', build: (b) => ui.runAI(b, 'Читаю бланк и сверяю с нормами…', () => App.ai.parseLab(files), (d, demo) => {
       const markers = normMarkers(d.markers);
-      if (d.error || !markers.length) return b.replaceChildren(ui.errorView('На фото не нашлось показателей анализов. Снимите бланк целиком, ровно и при хорошем свете — или введите значения вручную.'));
+      if (d.error || !markers.length) return kidsSet(b, ui.errorView('На фото не нашлось показателей анализов. Снимите бланк целиком, ровно и при хорошем свете — или введите значения вручную.'));
       const lab = { id: uid(), title: String(d.title || 'Анализы'), lab: String(d.lab || ''), date: /^\d{4}-\d{2}-\d{2}$/.test(d.date || '') && d.date <= App.dkey() ? d.date : App.dkey(), source: demo ? 'demo' : 'ai', markers: markers,
         doctorNote: String(d.doctorNote || ''), summary: String(d.summary || ''), nutrition: (d.nutrition || []).map(String), lifestyle: (d.lifestyle || []).map(String), doctor: (d.doctor || []).map(String) };
       store.state.labs.push(lab); store.commit(); s.close(); setTimeout(() => ui.labDetail(lab.id), 160);
@@ -174,7 +175,7 @@
       const note = h('textarea', { id: 'lm-note', placeholder: 'Заключение или рекомендации врача, если есть' });
       const list = h('div', { class: 'list' });
       const draw = () => {
-        list.replaceChildren(...rows.map((r, i) => h('div', { class: 'field', style: 'flex-wrap:wrap;row-gap:0' },
+        kidsSet(list, ...rows.map((r, i) => h('div', { class: 'field', style: 'flex-wrap:wrap;row-gap:0' },
           h('label', { for: 'lm-v' + i, style: 'flex:1;min-width:0;font-weight:600' }, r.name), r.input, h('span', { class: 'unit', style: 'min-width:54px' }, r.unit),
           h('button', { class: 'close-x', type: 'button', 'aria-label': 'Убрать', onclick: () => { rows.splice(i, 1); draw(); } }, icon('xmark', 14)),
           h('div', { class: 'sub', style: 'flex-basis:100%;padding-bottom:6px' }, r.refMin != null || r.refMax != null ? 'Норма: ' + (r.refMin != null ? nf(r.refMin, 2) : '…') + ' – ' + (r.refMax != null ? nf(r.refMax, 2) : '…') + ' ' + r.unit : 'Без референса'))),
@@ -186,12 +187,12 @@
           rows.push({ name: mk.name, unit: mk.unit || '', refMin: r[0], refMax: r[1], input: h('input', { id: 'lm-v' + idx, inputmode: 'decimal', placeholder: '0', style: 'flex:0 0 84px' }) }); ps.close(); draw(); setTimeout(() => rows[rows.length - 1].input.focus(), 350); };
         const show = () => { const f = q.value.trim().toLowerCase(), groups = {};
           D.MARKERS.filter((m) => !f || m.name.toLowerCase().indexOf(f) >= 0).filter((m) => !rows.some((r) => r.name === m.name)).forEach((m) => (groups[m.g] = groups[m.g] || []).push(m));
-          res.replaceChildren(...Object.keys(groups).map((g) => h('div', null, h('div', { class: 'caption', style: 'margin-bottom:6px' }, g), h('div', { class: 'list' }, groups[g].map((m) => ui.row({ title: m.name, val: m.unit, chev: false, onclick: () => add(m) }))))),
+          kidsSet(res, ...Object.keys(groups).map((g) => h('div', null, h('div', { class: 'caption', style: 'margin-bottom:6px' }, g), h('div', { class: 'list' }, groups[g].map((m) => ui.row({ title: m.name, val: m.unit, chev: false, onclick: () => add(m) }))))),
             f ? h('button', { class: 'btn tinted block', type: 'button', onclick: () => add({ name: q.value.trim(), unit: '' }) }, 'Добавить «' + q.value.trim() + '»') : null); };
-        q.addEventListener('input', show); show(); pb.append(q, res);
+        q.addEventListener('input', show); show(); kidsAdd(pb, q, res);
       } }); };
       draw();
-      b.append(h('div', { class: 'stack' }, h('div', { class: 'list' }, h('div', { class: 'field' }, h('label', { for: 'lm-title' }, 'Название'), title), h('div', { class: 'field' }, h('label', { for: 'lm-date' }, 'Дата сдачи'), date)), list,
+      kidsAdd(b, h('div', { class: 'stack' }, h('div', { class: 'list' }, h('div', { class: 'field' }, h('label', { for: 'lm-title' }, 'Название'), title), h('div', { class: 'field' }, h('label', { for: 'lm-date' }, 'Дата сдачи'), date)), list,
         h('div', { class: 'list' }, h('div', { class: 'field col' }, h('label', { for: 'lm-note' }, 'Разбор врача'), note)),
         h('p', { class: 'caption' }, 'Нормы подставлены ориентировочно. Если на вашем бланке указаны другие — ориентируйтесь на них.')));
       api.foot.appendChild(h('button', { class: 'btn primary block', type: 'button', onclick: () => {
@@ -219,7 +220,7 @@
         const off = lab.markers.filter((m) => m.status !== 'normal'), aiBox = h('div');
         if (!lab.summary) aiBox.appendChild(h('button', { class: 'btn tinted block', type: 'button', onclick: () => ui.runAI(aiBox, 'Разбираю показатели…', () => App.ai.explainLab(lab), (d, demo) => {
           Object.assign(lab, { summary: String(d.summary || ''), nutrition: (d.nutrition || []).map(String), lifestyle: (d.lifestyle || []).map(String), doctor: (d.doctor || []).map(String), demoText: !!demo }); store.commit(); draw(); }) }, icon('sparkles', 20), 'Объяснить результаты'));
-        b.replaceChildren(h('div', { class: 'stack' },
+        kidsSet(b, h('div', { class: 'stack' },
           h('div', null, h('h2', { style: 'font-size:26px;letter-spacing:-.02em;line-height:1.15;text-wrap:balance' }, lab.title), h('div', { class: 'sub', style: 'margin-top:4px' }, [App.fmtDate(lab.date, { day: 'numeric', month: 'long', year: 'numeric' }), lab.lab].filter(Boolean).join(' · ')),
             h('div', { class: 'chips', style: 'margin-top:10px' }, h('span', { class: 'chip c', style: { '--c': off.length ? 'var(--orange)' : 'var(--green)' } }, off.length ? off.length + ' вне нормы' : 'Всё в норме'), h('span', { class: 'chip' }, lab.markers.length + ' ' + App.plural(lab.markers.length, 'показатель', 'показателя', 'показателей')),
               lab.source === 'demo' || lab.demoText ? ui.demoBadge() : null)),
@@ -240,7 +241,7 @@
   function markerTrend(name) {
     const pts = store.state.labs.slice().sort((a, b) => (a.date < b.date ? -1 : 1)).map((l) => { const m = l.markers.find((x) => x.name === name); return m ? { label: App.fmtDate(l.date, { day: 'numeric', month: 'short' }), y: m.value, m: m } : null; }).filter(Boolean);
     const lastM = pts[pts.length - 1].m, st = D.STATUS[lastM.status];
-    sheet({ title: name, detent: 'auto', build: (b) => b.append(h('div', { class: 'stack' },
+    sheet({ title: name, detent: 'auto', build: (b) => kidsAdd(b, h('div', { class: 'stack' },
       h('div', { style: 'display:flex;align-items:baseline;justify-content:space-between' }, h('div', { class: 'big' }, nf(lastM.value, 2), h('small', null, lastM.unit)), h('span', { class: 'chip c', style: { '--c': st.c } }, st.t)),
       h('div', { class: 'card' }, App.lineChart(pts, { color: 'var(--purple)', decimals: 1, band: lastM.refMin != null && lastM.refMax != null ? [lastM.refMin, lastM.refMax] : null })),
       h('p', { class: 'caption' }, pts.length > 1 ? 'Зелёная полоса — диапазон нормы. Динамика по ' + pts.length + ' анализам.' : 'Добавьте следующий анализ — здесь появится динамика показателя.'))) });
@@ -254,7 +255,7 @@
         const all = store.state.vitals.filter((v) => v.type === type).sort((a, c) => (a.d < c.d ? -1 : 1)), last = all[all.length - 1];
         const pts = all.slice(-12).map((v) => ({ label: App.fmtDate(v.d, { day: 'numeric', month: 'short' }), y: isBp ? v.sys : v.value, y2: isBp ? v.dia : null }));
         const info = last ? (isBp ? calc.bpInfo(last.sys, last.dia) : calc.sugarInfo(last.value, last.fasting)) : null;
-        b.replaceChildren(h('div', { class: 'stack' },
+        kidsSet(b, h('div', { class: 'stack' },
           last ? h('div', { style: 'display:flex;align-items:baseline;justify-content:space-between' }, h('div', { class: 'big' }, isBp ? last.sys + '/' + last.dia : nf(last.value, 1), h('small', null, isBp ? 'мм рт. ст.' : 'ммоль/л')), h('span', { class: 'chip c', style: { '--c': info.c } }, info.t)) : null,
           all.length ? h('div', { class: 'card' }, App.lineChart(pts, { color: isBp ? 'var(--red)' : 'var(--orange)', color2: 'var(--blue)', decimals: isBp ? 0 : 1, band: isBp ? null : [3.9, 5.5] }),
             isBp ? h('div', { class: 'sub', style: 'display:flex;gap:14px;justify-content:center;margin-top:6px' }, h('span', { style: 'color:var(--red)' }, '● верхнее'), h('span', { style: 'color:var(--blue)' }, '● нижнее')) : null)
@@ -273,7 +274,7 @@
       const big = (id, ph) => h('input', { id: id, inputmode: 'decimal', placeholder: ph, style: 'width:100%;border:0;outline:0;background:var(--card-elev);border-radius:16px;padding:14px 8px;text-align:center;font:700 34px var(--font-round)' });
       const sys = big('va-sys', '120'), dia = big('va-dia', '80'), pulse = big('va-pulse', '70'), val = big('va-val', '5,2');
       const lab = (t, el) => h('label', { style: 'flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--fg-2);text-align:center' }, el, t);
-      b.append(h('div', { class: 'stack' }, isBp ? h('div', { style: 'display:flex;gap:10px' }, lab('Верхнее', sys), lab('Нижнее', dia), lab('Пульс', pulse))
+      kidsAdd(b, h('div', { class: 'stack' }, isBp ? h('div', { style: 'display:flex;gap:10px' }, lab('Верхнее', sys), lab('Нижнее', dia), lab('Пульс', pulse))
         : [lab('ммоль/л', val), App.seg([{ id: 1, label: 'Натощак' }, { id: 0, label: 'После еды' }], 1, (v) => { fasting = !!v; })],
         h('button', { class: 'btn primary block', type: 'button', onclick: () => {
           let rec, warn = null;
@@ -283,7 +284,7 @@
           else { const v = N(val.value); if (!(v >= 1 && v <= 40)) return toast('Проверьте значение сахара', { icon: 'info', color: 'var(--orange)' }); rec = { id: uid(), type: 'sugar', d: App.dkey(), value: +v.toFixed(1), fasting: fasting };
             if (v < 3.0) warn = 'Сахар очень низкий. Съешьте быстрые углеводы (сок, сахар) и измерьте снова через 15 минут. При спутанности сознания вызывайте скорую: 103 или 112.'; else if (v >= 13.9) warn = 'Сахар очень высокий. Свяжитесь с врачом сегодня. При сильной жажде, тошноте, запахе ацетона или спутанности сознания вызывайте скорую: 103 или 112.'; }
           store.state.vitals.push(rec); haptic(12); store.commit(); s.close(); if (done) done();
-          if (warn) setTimeout(() => sheet({ title: 'Обратите внимание', detent: 'auto', build: (wb, wapi) => wb.append(h('div', { class: 'stack' }, noteBox('var(--red)', 'info', 'Важно', warn), h('button', { class: 'btn primary block', type: 'button', onclick: () => wapi.close() }, 'Понятно'))) }), 250);
+          if (warn) setTimeout(() => sheet({ title: 'Обратите внимание', detent: 'auto', build: (wb, wapi) => kidsAdd(wb, h('div', { class: 'stack' }, noteBox('var(--red)', 'info', 'Важно', warn), h('button', { class: 'btn primary block', type: 'button', onclick: () => wapi.close() }, 'Понятно'))) }), 250);
           else toast('Записано: ' + (isBp ? rec.sys + '/' + rec.dia + ' — ' + calc.bpInfo(rec.sys, rec.dia).t.toLowerCase() : nf(rec.value, 1) + ' — ' + calc.sugarInfo(rec.value, fasting).t.toLowerCase()));
         } }, 'Сохранить')));
       setTimeout(() => (isBp ? sys : val).focus(), 450);
@@ -297,11 +298,11 @@
     const s = sheet({ title: ex ? 'Препарат' : 'Новый препарат', detent: 'auto', build: (b) => {
       const name = h('input', { id: 'me-name', value: m.name, placeholder: 'Например: витамин D3' }), dose = h('input', { id: 'me-dose', value: m.dose, placeholder: 'Например: 2000 МЕ' });
       const times = h('div', { class: 'list' });
-      const drawT = () => times.replaceChildren(...m.times.map((t, i) => h('div', { class: 'field' }, h('label', { for: 'me-t' + i }, 'Приём ' + (i + 1)), h('input', { id: 'me-t' + i, type: 'time', value: t, onchange: (e) => { m.times[i] = e.target.value || t; } }),
+      const drawT = () => kidsSet(times, ...m.times.map((t, i) => h('div', { class: 'field' }, h('label', { for: 'me-t' + i }, 'Приём ' + (i + 1)), h('input', { id: 'me-t' + i, type: 'time', value: t, onchange: (e) => { m.times[i] = e.target.value || t; } }),
         m.times.length > 1 ? h('button', { class: 'close-x', type: 'button', 'aria-label': 'Убрать время', onclick: () => { m.times.splice(i, 1); drawT(); } }, icon('xmark', 14)) : null)),
         m.times.length < 6 ? h('button', { class: 'add-line', type: 'button', onclick: () => { m.times.push('20:00'); drawT(); } }, icon('plus', 18), 'Добавить время') : null);
       drawT();
-      b.append(h('div', { class: 'stack' }, App.seg([{ id: 'supp', label: 'БАД или витамин' }, { id: 'med', label: 'Лекарство' }], m.kind, (v) => { m.kind = v; }),
+      kidsAdd(b, h('div', { class: 'stack' }, App.seg([{ id: 'supp', label: 'БАД или витамин' }, { id: 'med', label: 'Лекарство' }], m.kind, (v) => { m.kind = v; }),
         h('div', { class: 'list' }, h('div', { class: 'field' }, h('label', { for: 'me-name' }, 'Название'), name), h('div', { class: 'field' }, h('label', { for: 'me-dose' }, 'Дозировка'), dose)), times,
         h('p', { class: 'caption' }, 'Отметки о приёме появятся на экране «Сегодня». Дозировку и схему определяет врач.'),
         h('div', { class: 'btn-row' }, h('button', { class: 'btn primary', type: 'button', onclick: () => {
@@ -318,11 +319,11 @@
       App.memo['w:ring'] = App.clamp(store.peek().water / t, 0, 1); App.memo['w:num'] = store.peek().water / 1000;
       const ringBox = h('div', { style: 'display:grid;place-items:center' });
       const paint = () => { const w = store.peek().water;
-        ringBox.replaceChildren(ring({ id: 'w:ring', size: 190, stroke: 20, value: w / t, color: 'var(--blue)', center: [h('div', { class: 'big', style: 'font-size:46px' }, App.countUp(num, w / 1000, { id: 'w:num', decimals: 2 }), h('small', null, 'л')), sub] }));
+        kidsSet(ringBox, ring({ id: 'w:ring', size: 190, stroke: 20, value: w / t, color: 'var(--blue)', center: [h('div', { class: 'big', style: 'font-size:46px' }, App.countUp(num, w / 1000, { id: 'w:num', decimals: 2 }), h('small', null, 'л')), sub] }));
         sub.textContent = w >= t ? 'Норма выполнена' : 'ещё ' + nf((t - w) / 1000, 2) + ' л до нормы'; };
       const add = (ml) => { const d = store.day(); d.water = Math.max(0, d.water + ml); haptic(10); store.commit(); paint(); };
       paint();
-      b.append(h('div', { class: 'stack', style: 'gap:18px' }, ringBox,
+      kidsAdd(b, h('div', { class: 'stack', style: 'gap:18px' }, ringBox,
         h('div', { style: 'display:grid;grid-template-columns:repeat(4,1fr);gap:8px' }, [150, 250, 330, 500].map((ml) => h('button', { class: 'btn tinted', type: 'button', style: '--accent:var(--blue);padding:0;flex-direction:column;gap:0;min-height:58px', onclick: () => add(ml) }, h('span', { class: 'num' }, '+' + ml), h('span', { style: 'font-size:11px;font-weight:500;opacity:.8' }, 'мл')))),
         h('button', { class: 'btn gray block', type: 'button', onclick: () => add(-250) }, 'Убрать 250 мл'),
         h('p', { class: 'caption', style: 'text-align:center' }, 'Норма ' + nf(t / 1000, 1) + ' л рассчитана по весу: 30 мл на килограмм.')));
@@ -330,7 +331,7 @@
   };
   ui.sleep = function () {
     let v = store.peek().sleep != null ? store.peek().sleep : 7.5;
-    const s = sheet({ title: 'Сон прошлой ночью', detent: 'auto', build: (b) => b.append(h('div', { class: 'stack' },
+    const s = sheet({ title: 'Сон прошлой ночью', detent: 'auto', build: (b) => kidsAdd(b, h('div', { class: 'stack' },
       App.ruler({ min: 0, max: 14, step: 0.25, decimals: 2, major: 4, value: v, unit: ' ч', label: 'Сон', onChange: (x) => { v = x; } }),
       h('p', { class: 'caption', style: 'text-align:center' }, 'Взрослым обычно нужно 7–9 часов сна.'),
       h('button', { class: 'btn primary block', type: 'button', onclick: () => { store.day().sleep = v; haptic(10); store.commit(); s.close(); toast('Сон записан: ' + nf(v, 2) + ' ч', { icon: 'moon', color: 'var(--indigo)' }); } }, 'Сохранить'))) });
@@ -338,7 +339,7 @@
   ui.steps = function () {
     const s = sheet({ title: 'Шаги сегодня', detent: 'auto', build: (b) => {
       const inp = h('input', { id: 'st-val', inputmode: 'numeric', placeholder: '0', value: store.peek().steps != null ? store.peek().steps : '', style: 'width:100%;border:0;outline:0;background:var(--card-elev);border-radius:16px;padding:14px;text-align:center;font:700 40px var(--font-round)' });
-      b.append(h('div', { class: 'stack' }, inp, h('div', { class: 'chips', style: 'justify-content:center' }, [1000, 2500, 5000].map((n) => h('button', { class: 'pillbtn', type: 'button', onclick: () => { inp.value = Math.round(N(inp.value)) + n; haptic(6); } }, '+' + nf(n)))),
+      kidsAdd(b, h('div', { class: 'stack' }, inp, h('div', { class: 'chips', style: 'justify-content:center' }, [1000, 2500, 5000].map((n) => h('button', { class: 'pillbtn', type: 'button', onclick: () => { inp.value = Math.round(N(inp.value)) + n; haptic(6); } }, '+' + nf(n)))),
         h('p', { class: 'caption', style: 'text-align:center' }, 'Посмотрите число в приложении «Здоровье» на телефоне или на часах. Автоматический импорт появится в версии для App Store и Google Play.'),
         h('button', { class: 'btn primary block', type: 'button', onclick: () => { const v = Math.round(N(inp.value)); if (v < 0 || v > 150000) return inp.focus(); store.day().steps = v; haptic(10); store.commit(); s.close(); toast('Шаги записаны: ' + nf(v), { icon: 'walk', color: 'var(--green)' }); } }, 'Сохранить')));
       setTimeout(() => inp.focus(), 450);
@@ -349,7 +350,7 @@
     const s = sheet({ title: 'Вес', build: (b) => {
       const w = st.weights.slice().sort((a, c) => (a.d < c.d ? -1 : 1)), pts = w.slice(-14).map((x) => ({ label: App.fmtDate(x.d, { day: 'numeric', month: 'short' }), y: x.kg }));
       const toGo = p.targetWeight && p.goal !== 'keep' ? p.weight - p.targetWeight : null;
-      b.append(h('div', { class: 'stack' },
+      kidsAdd(b, h('div', { class: 'stack' },
         App.ruler({ min: 35, max: 200, step: 0.1, decimals: 1, value: v, unit: ' кг', label: 'Вес', onChange: (x) => { v = x; } }),
         h('button', { class: 'btn primary block', type: 'button', onclick: () => {
           st.weights = st.weights.filter((x) => x.d !== App.dkey()); st.weights.push({ d: App.dkey(), kg: v }); p.weight = v; st.targets = calc.targets(p);

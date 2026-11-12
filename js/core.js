@@ -11,6 +11,9 @@
     if (Array.isArray(kid)) { for (const k of kid) append(el, k); return; }
     el.appendChild(kid.nodeType ? kid : document.createTextNode(String(kid)));
   }
+  // безопасные замены replaceChildren/append: пропускают null и false, принимают массивы
+  function kidsSet(el) { el.textContent = ''; for (let i = 1; i < arguments.length; i++) append(el, arguments[i]); return el; }
+  function kidsAdd(el) { for (let i = 1; i < arguments.length; i++) append(el, arguments[i]); return el; }
   function h(tag, attrs) {
     const el = document.createElement(tag);
     if (attrs) for (const k in attrs) {
@@ -38,6 +41,7 @@
     heart: '<path d="M12 20.3s-7.6-4.5-7.6-10.1A4.3 4.3 0 0 1 12 7.5a4.3 4.3 0 0 1 7.6 2.7c0 5.6-7.6 10.1-7.6 10.1z"/>',
     pulse: '<path d="M3 12.5h3.6l2-5 3.3 10 2.4-6.2 1.3 1.2H21"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
+    minus: '<path d="M5 12h14"/>',
     scan: '<path d="M4 8V6.5A2.5 2.5 0 0 1 6.500 4H8M16 4h1.500A2.5 2.5 0 0 1 20 6.500V8M20 16v1.500a2.500 2.500 0 0 1-2.500 2.500H16M8 20H6.500A2.500 2.500 0 0 1 4 17.500V16M8 9v6M11 9v6M13.500 9v6M16 9v6"/>',
     drop: '<path d="M12 3.4s6 6.300 6 10.600a6 6 0 0 1-12 0c0-4.300 6-10.600 6-10.600z"/>',
     moon: '<path d="M20 14.600A8.500 8.500 0 1 1 9.400 4 7 7 0 0 0 20 14.600z"/>',
@@ -258,33 +262,112 @@
     return el;
   }
 
-  /* ---------- линейка-пикер (нативная инерция прокрутки) ---------- */
+  /* ---------- линейка-пикер: палец, мышь, колёсико, клавиатура, кнопки «−/+» и ввод числа ---------- */
   function ruler(o) {
     const TICK = 10, step = o.step || 1, dec = o.decimals || 0, major = o.major || 10;
-    const n = Math.round((o.max - o.min) / step);
-    const valEl = h('span', { class: 'big' });
+    const n = Math.round((o.max - o.min) / step), maxX = n * TICK;
+    const snapV = (v) => clamp(+(o.min + Math.round((v - o.min) / step) * step).toFixed(dec), o.min, o.max);
+    const xOf = (v) => Math.round((v - o.min) / step) * TICK;
+    const label = o.label || 'Значение';
+    const numEl = h('button', { class: 'ruler-num big', type: 'button', 'aria-label': label + ': ввести числом' });
     const track = h('div', { class: 'ruler-track' });
     for (let i = 0; i <= n; i++) {
       const m = i % major === 0;
       track.appendChild(h('div', { class: 'tick' + (m ? ' m' : '') }, m ? h('b', null, nf(o.min + i * step, 0)) : null));
     }
-    const sc = h('div', { class: 'ruler-scroll', tabindex: '0', role: 'slider', 'aria-label': o.label || '', 'aria-valuemin': o.min, 'aria-valuemax': o.max }, track);
-    let val = clamp(o.value, o.min, o.max), ready = false;
-    const show = () => { valEl.replaceChildren(nf(val, dec), h('small', null, o.unit || '')); sc.setAttribute('aria-valuenow', val); };
+    const sc = h('div', { class: 'ruler-scroll', tabindex: '0', role: 'slider', 'aria-label': label, 'aria-valuemin': o.min, 'aria-valuemax': o.max }, track);
+    let val = snapV(o.value), goal = val, ready = false, anim = null, touching = false, drag = null, settleT = 0, acc = 0;
+
+    const unitEl = h('small', { class: 'ruler-unit' });
+    const show = () => { numEl.textContent = nf(val, dec); unitEl.textContent = typeof o.unit === 'function' ? o.unit(val) : (o.unit || '').trim(); sc.setAttribute('aria-valuenow', val); };
+    const emit = (v) => { if (v === val) return; val = v; show(); if (o.onChange) o.onChange(v); };
+    const fromScroll = () => emit(snapV(o.min + (sc.scrollLeft / TICK) * step));
+    const stopAnim = () => { if (anim) { anim.stop(); anim = null; } };
+    // плавно довести шкалу до точки x, продолжая скорость жеста
+    const glide = (x, velocity) => {
+      stopAnim(); x = clamp(x, 0, maxX);
+      anim = spring({ from: sc.scrollLeft, to: x, velocity: velocity || 0, response: 0.38, damping: 1, precision: 0.4,
+        onUpdate: (p) => { sc.scrollLeft = p; fromScroll(); }, onRest: () => { anim = null; sc.scrollLeft = x; fromScroll(); } });
+    };
+    const jump = (v) => { stopAnim(); v = snapV(v); goal = v; sc.scrollLeft = xOf(v); emit(v); };
+    const bump = (k) => { goal = snapV((anim ? goal : val) + k * step); glide(xOf(goal)); };
+    const settle = () => { if (touching || drag || anim || !ready) return; const x = Math.round(sc.scrollLeft / TICK) * TICK; if (Math.abs(x - sc.scrollLeft) > 0.5) glide(x); };
     show();
-    sc.addEventListener('scroll', () => {
-      if (!ready) return;
-      const v = clamp(+(o.min + Math.round(sc.scrollLeft / TICK) * step).toFixed(dec), o.min, o.max);
-      if (v !== val) { val = v; show(); if (o.onChange) o.onChange(v); }
-    }, { passive: true });
-    sc.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { sc.scrollLeft += (e.key === 'ArrowRight' ? 1 : -1) * TICK; e.preventDefault(); } });
+
+    // палец и тачпад: нативная прокрутка с инерцией, после остановки — доводка до деления
+    sc.addEventListener('scroll', () => { if (!ready || anim || drag) return; fromScroll(); clearTimeout(settleT); settleT = setTimeout(settle, 140); }, { passive: true });
+    sc.addEventListener('touchstart', () => { touching = true; stopAnim(); clearTimeout(settleT); }, { passive: true });
+    const touchEnd = () => { touching = false; clearTimeout(settleT); settleT = setTimeout(settle, 160); };
+    sc.addEventListener('touchend', touchEnd); sc.addEventListener('touchcancel', touchEnd);
+
+    // мышь: перетаскивание с броском; клик по шкале — переход к делению под курсором
+    sc.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'mouse' || e.button !== 0) return;
+      stopAnim(); clearTimeout(settleT);
+      drag = { x: e.clientX, left: sc.scrollLeft, s: [[performance.now(), e.clientX]], moved: false };
+      try { sc.setPointerCapture(e.pointerId); } catch (er) {}
+      sc.classList.add('grabbing'); sc.focus({ preventScroll: true }); e.preventDefault();
+    });
+    sc.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      const dx = e.clientX - drag.x, t = performance.now();
+      if (Math.abs(dx) > 3) drag.moved = true;
+      sc.scrollLeft = clamp(drag.left - dx, 0, maxX); fromScroll();
+      drag.s.push([t, e.clientX]); while (drag.s.length > 6 || (drag.s.length > 2 && t - drag.s[0][0] > 120)) drag.s.shift();
+    });
+    const endDrag = (e) => {
+      if (!drag) return;
+      const s = drag.s, a = s[0], b = s[s.length - 1], dt = (b[0] - a[0]) / 1000, moved = drag.moved;
+      const v = dt > 0.005 && performance.now() - b[0] < 90 ? (b[1] - a[1]) / dt : 0;
+      drag = null; sc.classList.remove('grabbing');
+      if (!moved) { const r = sc.getBoundingClientRect(); return glide(Math.round((sc.scrollLeft + e.clientX - (r.left + r.width / 2)) / TICK) * TICK); }
+      glide(Math.round((sc.scrollLeft - project(v, 0.994)) / TICK) * TICK, -v);
+    };
+    sc.addEventListener('pointerup', endDrag); sc.addEventListener('pointercancel', endDrag);
+
+    // колёсико мыши и горизонтальная прокрутка тачпада
+    sc.addEventListener('wheel', (e) => {
+      const d = (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY) * (e.deltaMode === 1 ? 33 : 1);
+      if (!d) return;
+      e.preventDefault(); acc += d;
+      const k = Math.trunc(acc / 30);
+      if (k) { acc -= k * 30; stopAnim(); sc.scrollLeft = clamp(Math.round(sc.scrollLeft / TICK) * TICK + k * TICK, 0, maxX); fromScroll(); goal = val; }
+    }, { passive: false });
+    sc.addEventListener('keydown', (e) => {
+      const k = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1, PageUp: 10, PageDown: -10 }[e.key];
+      if (k) { bump(k); e.preventDefault(); } else if (e.key === 'Home') { jump(o.min); e.preventDefault(); } else if (e.key === 'End') { jump(o.max); e.preventDefault(); }
+    });
+
+    // кнопки «−» и «+»: одно нажатие — один шаг, удержание — быстрая прокрутка
+    const stepBtn = (k, text) => {
+      const b = h('button', { class: 'ruler-step', type: 'button', 'aria-label': text }, icon(k < 0 ? 'minus' : 'plus', 20));
+      let t1 = 0, t2 = 0, byPointer = false;
+      const stopRep = () => { clearTimeout(t1); clearInterval(t2); };
+      b.addEventListener('pointerdown', (e) => { e.preventDefault(); byPointer = true; bump(k); haptic(5); stopRep(); t1 = setTimeout(() => { t2 = setInterval(() => bump(k * 2), 70); }, 380); });
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => b.addEventListener(ev, stopRep));
+      b.addEventListener('click', () => { if (!byPointer) bump(k); byPointer = false; });   // клавиатура и программный клик
+      return b;
+    };
+    // нажатие на число — ввод с клавиатуры
+    numEl.addEventListener('click', () => {
+      const inp = h('input', { class: 'ruler-input big', id: 'ruler-in-' + uid(), inputmode: dec ? 'decimal' : 'numeric', 'aria-label': label, value: String(val).replace('.', ',') });
+      let closed = false;
+      const done = (apply) => { if (closed) return; closed = true; if (apply) { const v = num(inp.value); if (v != null) jump(v); } inp.replaceWith(numEl); show(); };
+      inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') done(true); else if (e.key === 'Escape') done(false); });
+      inp.addEventListener('blur', () => done(true));
+      numEl.replaceWith(inp); inp.focus(); inp.select();
+    });
+
     const place = (tries) => {
       if (ready) return;
       if (!sc.clientWidth) { if (tries > 0) setTimeout(() => place(tries - 1), 50); return; }
-      sc.scrollLeft = ((val - o.min) / step) * TICK; ready = true;
+      sc.scrollLeft = xOf(val); ready = true;
     };
     requestAnimationFrame(() => place(40)); setTimeout(() => place(40), 90);
-    return h('div', { class: 'ruler-wrap no-drag' }, h('div', { class: 'ruler-val' }, valEl), h('div', { class: 'ruler' }, sc));
+    return h('div', { class: 'ruler-wrap no-drag' },
+      h('div', { class: 'ruler-val' }, stepBtn(-1, 'Меньше'), h('div', { class: 'ruler-read' }, numEl, unitEl), stepBtn(1, 'Больше')),
+      h('div', { class: 'ruler' }, sc),
+      h('div', { class: 'ruler-hint' }, 'Листайте шкалу или нажмите на число, чтобы ввести его'));
   }
 
   /* ---------- листы ---------- */
@@ -303,9 +386,9 @@
     const grab = h('div', { class: 'sheet-grab' }, locked ? null : h('i'));
     const head = h('div', { class: 'sheet-head' }, l, titleEl, r);
     if (o.bare) { panel.appendChild(body); body.style.padding = '0'; }
-    else panel.append(grab, head, body);
+    else kidsAdd(panel, grab, head, body);
     if (o.foot) { api.foot = h('div', { class: 'sheet-foot' }); panel.appendChild(api.foot); }
-    wrap.append(scrim, panel); host.appendChild(wrap);
+    kidsAdd(wrap, scrim, panel); host.appendChild(wrap);
     const pushBack = detent === 'large' && stack.length === 0;
     let H = 0, y = 0, anim = null, closed = false;
     stack.push(api);
@@ -385,7 +468,7 @@
     return new Promise((res) => {
       let answered = false;
       const s = sheet({ title: o.title || 'Подтвердите', detent: 'auto', onClose: () => { if (!answered) res(false); }, build: (b) => {
-        b.append(
+        kidsAdd(b, 
           o.text ? h('p', { class: 'muted', style: 'text-align:center;font-size:15px;line-height:1.4;margin:0 8px 16px' }, o.text) : null,
           h('div', { class: 'stack', style: 'gap:8px' },
             h('button', { class: 'btn block ' + (o.danger ? 'gray danger' : 'primary'), type: 'button', onclick: () => { answered = true; res(true); s.close(); } }, o.ok || 'Да'),
@@ -417,7 +500,7 @@
     const p = store.state.profile;
     const avatar = h('button', { class: 'avatar', type: 'button', 'aria-label': 'Профиль', onclick: () => App.ui.profile && App.ui.profile() }, p && p.name ? p.name.trim().charAt(0).toUpperCase() : icon('person', 18));
     v.classList.toggle('no-anim', !first);
-    v.replaceChildren(
+    kidsSet(v, 
       h('div', { class: 'navbar' }, h('div', { class: 'nav-side' }), h('div', { class: 'nav-title' }, d.title || tab.title), h('div', { class: 'nav-side' }, d.right || null)),
       h('div', { class: 'gutter' },
         h('div', { class: 'large-title' }, h('div', null, d.eyebrow ? h('div', { class: 'eyebrow' }, d.eyebrow) : null, h('h1', null, d.title || tab.title)), avatar),
@@ -462,7 +545,7 @@
       tabs.appendChild(t.btn);
     });
     const fab = h('button', { class: 'fab', type: 'button', 'aria-label': 'Добавить', onclick: () => App.ui.quickAdd && App.ui.quickAdd(fab) }, icon('plus', 28));
-    app.replaceChildren(
+    kidsSet(app, 
       h('div', { id: 'root' }, views, h('nav', { id: 'tabbar' }, tabs, fab)),
       h('div', { id: 'sheets' }), h('div', { id: 'toasts', 'aria-live': 'polite' })
     );
@@ -470,7 +553,7 @@
   }
 
   Object.assign(App, {
-    h, icon, clamp, uid, dkey, parseKey, addDays, fmtDate, nf, num, plural, haptic, pad,
+    h, kidsSet, kidsAdd, icon, clamp, uid, dkey, parseKey, addDays, fmtDate, nf, num, plural, haptic, pad,
     spring, project, rubber, animateValue, countUp, store, ring, bar, spark, lineChart, seg, ruler,
     sheet, confirm: confirmSheet, toast, registerTab, go, refresh, mount, still,
     currentTab: () => current && current.id

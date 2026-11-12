@@ -3,6 +3,7 @@
   'use strict';
   const App = window.App, { h, icon, store, calc, nf, bar, sheet, toast, haptic, uid } = App;
   const ui = App.ui, D = App.data;
+  const kidsSet = App.kidsSet, kidsAdd = App.kidsAdd;
   let segId = 'diary', diaryDate = null, planDay = (new Date().getDay() + 6) % 7;
 
   const mealOf = (id) => D.MEALS.find((m) => m.id === id) || D.MEALS[0];
@@ -10,21 +11,21 @@
   const errorView = (msg, retry) => h('div', { class: 'empty fade' }, h('span', { class: 'ico soft', style: { '--c': 'var(--orange)' } }, icon('info', 30)), h('b', null, 'Не получилось'), h('p', null, msg),
     retry ? h('button', { class: 'btn tinted', type: 'button', onclick: retry }, 'Повторить') : null);
   async function runAI(box, label, fn, ok) {
-    box.replaceChildren(ui.aiWait(label));
+    kidsSet(box, ui.aiWait(label));
     try { const r = await fn(); ok(r.data || {}, r.demo); }
-    catch (e) { console.error(e); box.replaceChildren(errorView(e.user || 'Что-то пошло не так. Попробуйте ещё раз.', () => runAI(box, label, fn, ok))); }
+    catch (e) { console.error(e); kidsSet(box, errorView(e.user || 'Что-то пошло не так. Попробуйте ещё раз.', () => runAI(box, label, fn, ok))); }
   }
   ui.runAI = runAI; ui.errorView = errorView;
   const N = (v) => { const n = App.num(v); return n == null ? 0 : n; };
   function addFood(item, meal, date) {
     store.day(date).food.push({ id: uid(), meal: meal || D.mealByTime(), name: String(item.name || 'Блюдо').slice(0, 80), grams: Math.round(N(item.grams)), kcal: Math.round(N(item.kcal)), p: +N(item.p).toFixed(1), f: +N(item.f).toFixed(1), c: +N(item.c).toFixed(1) });
   }
-  const mealPicker = (value, onPick) => { const box = h('div', { class: 'chips' }); const draw = () => box.replaceChildren(...D.MEALS.map((m) => h('button', { class: 'pillbtn' + (value === m.id ? ' on' : ''), type: 'button', onclick: () => { value = m.id; onPick(m.id); draw(); } }, m.t))); draw(); return box; };
+  const mealPicker = (value, onPick) => { const box = h('div', { class: 'chips' }); const draw = () => kidsSet(box, ...D.MEALS.map((m) => h('button', { class: 'pillbtn' + (value === m.id ? ' on' : ''), type: 'button', onclick: () => { value = m.id; onPick(m.id); draw(); } }, m.t))); draw(); return box; };
 
   /* ---------- вкладка ---------- */
   function foodTab() {
     const content = h('div', { style: 'margin-top:14px' });
-    const draw = () => content.replaceChildren(...(segId === 'diary' ? diaryView() : segId === 'plan' ? planView() : fridgeView()));
+    const draw = () => kidsSet(content, ...(segId === 'diary' ? diaryView() : segId === 'plan' ? planView() : fridgeView()));
     draw();
     return { title: 'Питание', body: [App.seg([{ id: 'diary', label: 'Дневник' }, { id: 'plan', label: 'Меню' }, { id: 'fridge', label: 'Холодильник' }], segId, (v) => { segId = v; draw(); }), content] };
   }
@@ -63,7 +64,7 @@
   }
   function foodItem(x, date) {
     const s = sheet({ title: x.name, detent: 'auto', build: (b) => {
-      b.append(h('div', { class: 'stack' }, nutriGrid(x, x.grams ? 'Порция ' + nf(x.grams) + ' г' : 'Порция'),
+      kidsAdd(b, h('div', { class: 'stack' }, nutriGrid(x, x.grams ? 'Порция ' + nf(x.grams) + ' г' : 'Порция'),
         h('button', { class: 'btn gray danger block', type: 'button', onclick: () => { const d = store.day(date); d.food = d.food.filter((y) => y.id !== x.id); store.commit(); s.close(); } }, icon('trash', 20), 'Удалить из дневника')));
     } });
   }
@@ -81,8 +82,8 @@
       const text = h('input', { class: 'input-big', id: 'fa-text', placeholder: 'Например: борщ и два куска хлеба', enterkeyhint: 'done' });
       const result = h('div');
       const showItems = (items, demo) => {
-        if (!items.length) return result.replaceChildren(errorView('Не удалось распознать еду. Опишите подробнее или введите вручную.'));
-        result.replaceChildren(h('div', { class: 'stack fade' }, demo ? ui.demoBadge() : null,
+        if (!items.length) return kidsSet(result, errorView('Не удалось распознать еду. Опишите подробнее или введите вручную.'));
+        kidsSet(result, h('div', { class: 'stack fade' }, demo ? ui.demoBadge() : null,
           h('div', { class: 'list' }, items.map((x) => ui.row({ title: x.name, sub: nf(x.grams) + ' г · ' + bju(x), val: nf(x.kcal) + ' ккал' }))),
           h('button', { class: 'btn primary block', type: 'button', onclick: () => { items.forEach((x) => addFood(x, meal, date)); haptic(12); store.commit(); s.close(); toast('Добавлено в дневник'); } }, 'Добавить в дневник'), demo ? ui.aiNote() : null));
       };
@@ -92,7 +93,7 @@
       const seen = {}, recent = [];
       Object.keys(store.state.days).sort().reverse().slice(0, 14).forEach((k) => store.state.days[k].food.forEach((x) => { if (x.grams && !seen[x.name] && recent.length < 6) { seen[x.name] = 1; recent.push(x); } }));
       const act = (ic, c, label, fn) => h('button', { class: 'action', type: 'button', onclick: fn }, h('span', { class: 'ico', style: { '--c': c } }, icon(ic, 26)), label);
-      b.append(h('div', { class: 'stack' }, mealPicker(meal, (v) => { meal = v; }), text,
+      kidsAdd(b, h('div', { class: 'stack' }, mealPicker(meal, (v) => { meal = v; }), text,
         h('button', { class: 'btn primary block', type: 'button', onclick: () => estimate() }, icon('sparkles', 20), 'Посчитать с ИИ'),
         h('div', { class: 'actions', style: 'grid-template-columns:repeat(3,1fr)' },
           act('camera', 'var(--pink)', 'Фото еды', () => ui.pickPhoto({ capture: true, onFiles: (f) => estimate(f) })),
@@ -106,7 +107,7 @@
   function manualFood(meal, date, parent) {
     const f = {}, fld = (k, label, unit, ph) => { f[k] = h('input', { id: 'mf-' + k, inputmode: k === 'name' ? 'text' : 'decimal', placeholder: ph || '0' }); return h('div', { class: 'field' }, h('label', { for: 'mf-' + k }, label), f[k], unit ? h('span', { class: 'unit' }, unit) : null); };
     const s = sheet({ title: 'Своё блюдо', detent: 'auto', build: (b) => {
-      b.append(h('div', { class: 'stack' }, h('div', { class: 'list' }, fld('name', 'Название', null, 'Блюдо или продукт'), fld('grams', 'Порция', 'г'), fld('kcal', 'Калории', 'ккал'), fld('p', 'Белки', 'г'), fld('f', 'Жиры', 'г'), fld('c', 'Углеводы', 'г')),
+      kidsAdd(b, h('div', { class: 'stack' }, h('div', { class: 'list' }, fld('name', 'Название', null, 'Блюдо или продукт'), fld('grams', 'Порция', 'г'), fld('kcal', 'Калории', 'ккал'), fld('p', 'Белки', 'г'), fld('f', 'Жиры', 'г'), fld('c', 'Углеводы', 'г')),
         h('p', { class: 'caption' }, 'Значения — на всю порцию.'),
         h('button', { class: 'btn primary block', type: 'button', onclick: () => {
           if (!f.name.value.trim() || !N(f.kcal.value)) return toast('Укажите название и калории', { icon: 'info', color: 'var(--orange)' });
@@ -153,12 +154,12 @@
         const days = (d.days || []).map((day, i) => ({ title: day.title || D.DAYNAMES[i % 7], meals: (day.meals || []).filter((m) => m && m.name).map((m) => ({
           meal: D.MEALS.some((x) => x.id === m.meal) ? m.meal : 'snack', name: String(m.name), kcal: Math.round(N(m.kcal)), p: Math.round(N(m.p)), f: Math.round(N(m.f)), c: Math.round(N(m.c)),
           ingredients: (m.ingredients || []).map((x) => ({ name: String(x.name || ''), grams: Math.round(N(x.grams)) })), steps: (m.steps || []).map(String) })) })).filter((x) => x.meals.length);
-        if (!days.length) return b.replaceChildren(errorView('ИИ вернул пустое меню. Попробуйте ещё раз.', start));
+        if (!days.length) return kidsSet(b, errorView('ИИ вернул пустое меню. Попробуйте ещё раз.', start));
         st.mealPlan = { createdAt: Date.now(), source: demo ? 'demo' : 'ai', note: d.note || '', days: days };
         planDay = (new Date().getDay() + 6) % 7; segId = 'plan'; store.commit(); s.close(); toast(demo ? 'Показано базовое меню' : 'Меню готово', { icon: 'sparkles', color: 'var(--purple)' });
       });
       const flags = App.ai.labFlags();
-      b.append(h('div', { class: 'stack' },
+      kidsAdd(b, h('div', { class: 'stack' },
         h('div', { class: 'note', style: { '--c': 'var(--green)' } }, h('b', { class: 'h' }, icon('target', 15), 'Что учтём'),
           h('ul', null, h('li', null, nf(st.targets.kcal) + ' ккал · Б ' + st.targets.p + ' · Ж ' + st.targets.f + ' · У ' + st.targets.c + ' г'), h('li', null, flags), st.profile.allergies ? h('li', null, 'Исключаем: ' + st.profile.allergies) : null)),
         wishes,
@@ -184,7 +185,7 @@
     o = o || {};
     let meal = o.meal || D.mealByTime();
     const s = sheet({ title: 'Блюдо', foot: true, build: (b, api) => {
-      b.append(h('div', { class: 'stack' }, h('h2', { style: 'font-size:26px;line-height:1.15;letter-spacing:-.02em;text-wrap:balance' }, m.name),
+      kidsAdd(b, h('div', { class: 'stack' }, h('h2', { style: 'font-size:26px;line-height:1.15;letter-spacing:-.02em;text-wrap:balance' }, m.name),
         h('div', { class: 'chips' }, m.time ? h('span', { class: 'chip' }, icon('clock', 13), m.time + ' мин') : null, o.demo ? ui.demoBadge() : null),
         nutriGrid(m, 'На порцию'),
         m.ingredients && m.ingredients.length ? h('div', null, h('div', { class: 'caption', style: 'margin-bottom:6px' }, 'Ингредиенты'), h('div', { class: 'list' }, m.ingredients.map((i) => ui.row({ title: i.name, val: i.grams ? nf(i.grams) + ' г' : '' })))) : null,
@@ -227,7 +228,7 @@
   function fridgeItem(x) {
     const s = sheet({ title: x.name, detent: 'auto', build: (b) => {
       const q = h('input', { id: 'fi-qty', value: x.qty || '', placeholder: 'например, 500 г' });
-      b.append(h('div', { class: 'stack' }, h('div', { class: 'list' }, h('div', { class: 'field' }, h('label', { for: 'fi-qty' }, 'Количество'), q)),
+      kidsAdd(b, h('div', { class: 'stack' }, h('div', { class: 'list' }, h('div', { class: 'field' }, h('label', { for: 'fi-qty' }, 'Количество'), q)),
         h('div', { class: 'btn-row' }, h('button', { class: 'btn primary', type: 'button', onclick: () => { x.qty = q.value.trim(); store.commit(); s.close(); } }, 'Сохранить'),
           h('button', { class: 'btn gray danger', type: 'button', onclick: () => { store.state.fridge = store.state.fridge.filter((y) => y.id !== x.id); store.commit(); s.close(); } }, 'Закончилось'))));
     } });
@@ -236,9 +237,9 @@
     let cat = CATS[0];
     const s = sheet({ title: 'В холодильник', detent: 'auto', build: (b) => {
       const name = h('input', { class: 'input-big', id: 'fa-name', placeholder: 'Продукт, например «яйца»' }), qty = h('input', { class: 'input-big', id: 'fa-qty', placeholder: 'Количество (необязательно)' });
-      const cats = h('div', { class: 'chips' }); const draw = () => cats.replaceChildren(...CATS.map((c) => h('button', { class: 'pillbtn' + (c === cat ? ' on' : ''), type: 'button', onclick: () => { cat = c; draw(); } }, c))); draw();
+      const cats = h('div', { class: 'chips' }); const draw = () => kidsSet(cats, ...CATS.map((c) => h('button', { class: 'pillbtn' + (c === cat ? ' on' : ''), type: 'button', onclick: () => { cat = c; draw(); } }, c))); draw();
       const add = (close) => { const n = name.value.trim(); if (!n) return name.focus(); store.state.fridge.push({ id: uid(), name: n, qty: qty.value.trim(), cat: cat }); store.commit(); haptic(8); if (close) { segId = 'fridge'; s.close(); App.go('food', { keep: true }); } else { name.value = ''; qty.value = ''; name.focus(); toast('Добавлено: ' + n); } };
-      b.append(h('div', { class: 'stack' }, name, qty, cats,
+      kidsAdd(b, h('div', { class: 'stack' }, name, qty, cats,
         h('div', { class: 'btn-row' }, h('button', { class: 'btn primary', type: 'button', onclick: () => add(true) }, 'Готово'), h('button', { class: 'btn gray', type: 'button', onclick: () => add(false) }, 'Ещё один')),
         h('button', { class: 'btn tinted block', type: 'button', onclick: () => { s.close(); setTimeout(fridgePhoto, 150); } }, icon('camera', 20), 'Сфотографировать продукты')));
     } });
@@ -248,19 +249,19 @@
       const name = h('input', { class: 'input-big', id: 'sh-name', placeholder: 'Что купить' });
       const add = () => { const n = name.value.trim(); if (!n) return name.focus(); store.state.shopping.push({ id: uid(), name: n, qty: '', done: false }); store.commit(); name.value = ''; name.focus(); toast('Добавлено: ' + n, { icon: 'cart', color: 'var(--blue)' }); };
       name.addEventListener('keydown', (e) => { if (e.key === 'Enter') add(); });
-      b.append(h('div', { class: 'stack' }, name, h('div', { class: 'btn-row' }, h('button', { class: 'btn primary', type: 'button', onclick: add }, 'Добавить'), h('button', { class: 'btn gray', type: 'button', onclick: () => s.close() }, 'Готово'))));
+      kidsAdd(b, h('div', { class: 'stack' }, name, h('div', { class: 'btn-row' }, h('button', { class: 'btn primary', type: 'button', onclick: add }, 'Добавить'), h('button', { class: 'btn gray', type: 'button', onclick: () => s.close() }, 'Готово'))));
     } });
   }
   function fridgePhoto() {
     ui.pickPhoto({ multiple: true, onFiles: (files) => {
       const s = sheet({ title: 'Продукты на фото', build: (b) => runAI(b, 'Смотрю, что есть в холодильнике…', () => App.ai.fridgePhoto(files), (d, demo) => {
         const items = (d.items || []).filter((x) => x && x.name).map((x) => ({ name: String(x.name), qty: String(x.qty || ''), cat: CATS.indexOf(x.cat) >= 0 ? x.cat : 'Другое', on: true }));
-        if (!items.length) return b.replaceChildren(errorView('На фото не удалось распознать продукты. Попробуйте снять ближе и при хорошем свете.'));
+        if (!items.length) return kidsSet(b, errorView('На фото не удалось распознать продукты. Попробуйте снять ближе и при хорошем свете.'));
         const list = h('div', { class: 'list' });
-        const draw = () => list.replaceChildren(...items.map((x) => h('button', { class: 'row tap', type: 'button', onclick: () => { x.on = !x.on; haptic(6); draw(); } },
+        const draw = () => kidsSet(list, ...items.map((x) => h('button', { class: 'row tap', type: 'button', onclick: () => { x.on = !x.on; haptic(6); draw(); } },
           h('span', { class: 'set' + (x.on ? ' on' : ''), style: 'flex:none' }, x.on ? icon('check', 15) : null), h('div', { class: 'row-main' }, h('div', { class: 'row-title' }, x.name), h('div', { class: 'row-sub' }, x.cat)), h('div', { class: 'row-val' }, x.qty))));
         draw();
-        b.replaceChildren(h('div', { class: 'stack fade' }, demo ? ui.demoBadge() : null, h('p', { class: 'caption' }, 'Снимите галочки с того, что распознано неверно.'), list, demo ? ui.aiNote() : null,
+        kidsSet(b, h('div', { class: 'stack fade' }, demo ? ui.demoBadge() : null, h('p', { class: 'caption' }, 'Снимите галочки с того, что распознано неверно.'), list, demo ? ui.aiNote() : null,
           h('button', { class: 'btn primary block', type: 'button', onclick: () => { items.filter((x) => x.on).forEach((x) => store.state.fridge.push({ id: uid(), name: x.name, qty: x.qty, cat: x.cat })); segId = 'fridge'; store.commit(); s.close(); App.go('food', { keep: true }); toast('Продукты добавлены', { icon: 'fridge', color: 'var(--orange)' }); } }, 'Добавить в холодильник')));
       }) });
     } });
@@ -271,8 +272,8 @@
     sheet({ title: 'Что приготовить', build: (b) => {
       const go = () => runAI(b, 'Подбираю блюда из ваших продуктов…', () => App.ai.recipes({ items: st.fridge.map((x) => x.name + (x.qty ? ' (' + x.qty + ')' : '')), left: left }), (d, demo) => {
         const rs = (d.recipes || []).filter((r) => r && r.name);
-        if (!rs.length) return b.replaceChildren(errorView('Не удалось подобрать блюда. Попробуйте ещё раз.', go));
-        b.replaceChildren(h('div', { class: 'stack fade' }, demo ? ui.demoBadge() : null, h('p', { class: 'caption' }, 'На сегодня осталось ' + nf(left.kcal) + ' ккал · ' + bju(left) + ' г'),
+        if (!rs.length) return kidsSet(b, errorView('Не удалось подобрать блюда. Попробуйте ещё раз.', go));
+        kidsSet(b, h('div', { class: 'stack fade' }, demo ? ui.demoBadge() : null, h('p', { class: 'caption' }, 'На сегодня осталось ' + nf(left.kcal) + ' ккал · ' + bju(left) + ' г'),
           rs.map((r, i) => h('div', { class: 'card tap rise', role: 'button', tabindex: '0', style: { '--i': i }, onclick: () => ui.dish(r, { demo: demo }) },
             h('div', { style: 'display:flex;justify-content:space-between;gap:10px;align-items:flex-start' }, h('div', { style: 'font-weight:700;font-size:18px;line-height:1.2' }, r.name), h('span', { class: 'mid', style: 'font-size:19px;white-space:nowrap' }, nf(r.kcal), h('small', null, 'ккал'))),
             h('div', { class: 'sub', style: 'margin:4px 0 10px' }, (r.time ? r.time + ' мин · ' : '') + bju(r)),
@@ -309,7 +310,7 @@
       const code = h('input', { class: 'input-big', id: 'sc-code', inputmode: 'numeric', placeholder: 'Цифры под штрихкодом', maxlength: '14' });
       const onCode = (c) => { if (found) return; c = String(c || '').replace(/\D/g, ''); if (c.length < 8) return; found = true; haptic(30); stop(); s.close(); setTimeout(() => lookup(c, o), 160); };
       const fromPhoto = () => ui.pickPhoto({ capture: true, onFiles: async (f) => { status.textContent = 'Читаю штрихкод…'; try { onCode(await decodeImage(f[0])); if (!found) throw 0; } catch (e) { status.textContent = 'Штрихкод не читается. Снимите ближе и ровнее или введите цифры вручную.'; } } });
-      b.append(h('div', { class: 'stack' }, box, status,
+      kidsAdd(b, h('div', { class: 'stack' }, box, status,
         h('button', { class: 'btn tinted block', type: 'button', onclick: fromPhoto }, icon('camera', 20), 'Сфотографировать штрихкод'),
         h('div', { style: 'display:flex;gap:8px' }, code, h('button', { class: 'btn primary', type: 'button', onclick: () => { if (code.value.replace(/\D/g, '').length < 8) return code.focus(); onCode(code.value); } }, 'Найти')),
         h('button', { class: 'btn gray block', type: 'button', onclick: () => { stop(); s.close(); setTimeout(() => labelPhoto(o), 160); } }, icon('sparkles', 20), 'Нет штрихкода — фото состава')));
@@ -338,7 +339,7 @@
   const ALLERGEN = { milk: 'молоко', gluten: 'глютен', eggs: 'яйца', nuts: 'орехи', peanuts: 'арахис', soybeans: 'соя', fish: 'рыба', crustaceans: 'ракообразные', 'sesame-seeds': 'кунжут', mustard: 'горчица', celery: 'сельдерей', molluscs: 'моллюски', lupin: 'люпин', 'sulphur-dioxide-and-sulphites': 'сульфиты' };
   async function lookup(code, o) {
     const s = sheet({ title: 'Продукт', build: (b) => {
-      b.replaceChildren(ui.aiWait('Ищу продукт ' + code + '…'));
+      kidsSet(b, ui.aiWait('Ищу продукт ' + code + '…'));
       (async () => {
         let p = null;
         try {
@@ -354,7 +355,7 @@
           }
         } catch (e) { p = null; }
         if (p) { s.close(); setTimeout(() => ui.product(p, o), 140); return; }
-        b.replaceChildren(h('div', { class: 'empty fade' }, h('span', { class: 'ico soft', style: { '--c': 'var(--blue)' } }, icon('barcode', 30)), h('b', null, App.ai.hosted() ? 'Код прочитан: ' + code : 'Продукта нет в базе'),
+        kidsSet(b, h('div', { class: 'empty fade' }, h('span', { class: 'ico soft', style: { '--c': 'var(--blue)' } }, icon('barcode', 30)), h('b', null, App.ai.hosted() ? 'Код прочитан: ' + code : 'Продукта нет в базе'),
           h('p', null, App.ai.hosted() ? 'Поиск по базе продуктов работает в установленном приложении. Здесь сфотографируйте состав на упаковке — ИИ прочитает и оценит его.' : 'Код ' + code + ' не найден в Open Food Facts. Сфотографируйте состав на упаковке — ИИ прочитает и оценит его.'),
           h('button', { class: 'btn primary', type: 'button', onclick: () => { s.close(); setTimeout(() => labelPhoto(o), 150); } }, icon('camera', 20), 'Сфотографировать состав')));
       })();
@@ -363,7 +364,7 @@
   function labelPhoto(o) {
     ui.pickPhoto({ capture: true, multiple: true, onFiles: (files) => {
       const s = sheet({ title: 'Продукт', build: (b) => runAI(b, 'Читаю этикетку…', () => App.ai.productLabel(files), (d, demo) => {
-        if (d.error || !d.name) return b.replaceChildren(errorView('На фото не видно состава или пищевой ценности. Снимите этикетку крупнее.'));
+        if (d.error || !d.name) return kidsSet(b, errorView('На фото не видно состава или пищевой ценности. Снимите этикетку крупнее.'));
         const p = { name: String(d.name), brand: String(d.brand || ''), per100: d.per100 || {}, ingredients: String(d.ingredients || ''), additives: [], allergens: [], ai: { verdict: d.verdict, summary: d.summary, pros: d.pros || [], cons: d.cons || [] }, demo: demo };
         s.close(); setTimeout(() => ui.product(p, o), 140);
       }) });
@@ -387,15 +388,15 @@
       const hits = excluded.filter((x) => hay.indexOf(x.split(' ')[0].slice(0, Math.max(4, x.split(' ')[0].length - 2))) >= 0);
       const aiBox = h('div');
       const showAI = (a, demo) => { const c = a.verdict === 'good' ? 'var(--green)' : a.verdict === 'bad' ? 'var(--red)' : 'var(--orange)';
-        aiBox.replaceChildren(h('div', { class: 'note fade', style: { '--c': c } }, h('b', { class: 'h' }, icon('sparkles', 15), a.verdict === 'good' ? 'Подходит' : a.verdict === 'bad' ? 'Лучше не брать' : 'Можно, но в меру', demo ? ui.demoBadge() : null), a.summary || '',
+        kidsSet(aiBox, h('div', { class: 'note fade', style: { '--c': c } }, h('b', { class: 'h' }, icon('sparkles', 15), a.verdict === 'good' ? 'Подходит' : a.verdict === 'bad' ? 'Лучше не брать' : 'Можно, но в меру', demo ? ui.demoBadge() : null), a.summary || '',
           (a.pros || []).length || (a.cons || []).length ? h('ul', null, (a.pros || []).map((x) => h('li', null, '＋ ' + x)), (a.cons || []).map((x) => h('li', null, '− ' + x))) : null)); };
       if (p.ai) showAI(p.ai, p.demo);
       else aiBox.appendChild(h('button', { class: 'btn tinted block', type: 'button', onclick: () => runAI(aiBox, 'Оцениваю состав…', () => App.ai.productVerdict(p), showAI) }, icon('sparkles', 20), 'Разбор состава от ИИ'));
       const gramsIn = h('input', { id: 'pr-grams', inputmode: 'decimal', value: '100' });
       const portion = h('div');
-      const drawPortion = () => { grams = App.clamp(N(gramsIn.value) || 0, 0, 5000); portion.replaceChildren(nutriGrid(calc.portion(n, grams), 'В порции ' + nf(grams) + ' г')); };
+      const drawPortion = () => { grams = App.clamp(N(gramsIn.value) || 0, 0, 5000); kidsSet(portion, nutriGrid(calc.portion(n, grams), 'В порции ' + nf(grams) + ' г')); };
       gramsIn.addEventListener('input', drawPortion); drawPortion();
-      b.append(h('div', { class: 'stack' },
+      kidsAdd(b, h('div', { class: 'stack' },
         h('div', { style: 'display:flex;gap:14px;align-items:flex-start' }, h('div', { style: 'flex:1;min-width:0' }, h('h2', { style: 'font-size:24px;line-height:1.15;letter-spacing:-.02em;text-wrap:balance' }, p.name), h('div', { class: 'sub', style: 'margin-top:4px' }, [p.brand, p.quantity].filter(Boolean).join(' · ') || (p.code ? 'Штрихкод ' + p.code : ''))),
           p.nutri ? h('div', { class: 'grade', title: 'Nutri-Score', style: { '--c': { A: '#1E8F4E', B: '#7AC143', C: '#F5B301', D: '#EF7D1A', E: '#E63E11' }[p.nutri] } }, p.nutri) : null),
         hits.length ? h('div', { class: 'note', style: { '--c': 'var(--red)' } }, h('b', { class: 'h' }, icon('info', 15), 'Вы это исключили'), 'В составе найдено: ' + hits.join(', ') + '.') : null,
@@ -408,7 +409,7 @@
           p.nova ? h('span', { class: 'chip c', style: { '--c': p.nova >= 4 ? 'var(--red)' : p.nova === 3 ? 'var(--orange)' : 'var(--green)' } }, p.nova >= 4 ? 'ультрапереработанный' : p.nova === 3 ? 'переработанный' : 'мало обработан') : null) : null,
         n.kcal != null ? h('div', null, h('div', { class: 'list' }, h('div', { class: 'field' }, h('label', { for: 'pr-grams' }, 'Порция'), gramsIn, h('span', { class: 'unit' }, 'г'))), h('div', { style: 'margin-top:10px' }, portion), h('div', { style: 'margin-top:10px' }, mealPicker(meal, (v) => { meal = v; }))) : null,
         p.code ? h('p', { class: 'disclaimer' }, 'Данные о продукте — из открытой базы Open Food Facts, их вносят пользователи. Сверяйте с упаковкой.') : null));
-      api.foot.append(h('div', { class: 'btn-row' },
+      kidsAdd(api.foot, h('div', { class: 'btn-row' },
         n.kcal != null ? h('button', { class: 'btn primary', type: 'button', onclick: () => { if (!grams) return gramsIn.focus(); addFood(Object.assign({ name: p.name, grams: grams }, calc.portion(n, grams)), meal, o.date); haptic(12); store.commit(); s.close(); toast('Добавлено в дневник'); } }, 'Съел') : null,
         h('button', { class: 'btn gray', type: 'button', onclick: () => { st.fridge.push({ id: uid(), name: p.name, qty: p.quantity || '', cat: 'Другое' }); store.commit(); s.close(); toast('В холодильнике', { icon: 'fridge', color: 'var(--orange)' }); } }, 'Купил'),
         h('button', { class: 'btn gray', type: 'button', 'aria-label': 'В список покупок', style: 'flex:0 0 54px;padding:0', onclick: () => { st.shopping.push({ id: uid(), name: p.name, qty: '', done: false }); store.commit(); toast('В списке покупок', { icon: 'cart', color: 'var(--blue)' }); } }, icon('cart', 22))));

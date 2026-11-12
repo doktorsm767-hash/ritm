@@ -232,13 +232,21 @@ h1,h2,h3,p{margin:0}
 .stepper span{width:.5px;height:18px;background:var(--sep)}
 
 /* линейка-пикер */
-.ruler-val{text-align:center;margin-bottom:6px}
-.ruler-val .big{font-size:56px}
+.ruler-val{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px}
+.ruler-read{display:flex;align-items:baseline;justify-content:center;min-width:168px}
+.ruler-num{font-size:56px;padding:0 4px;border-radius:14px;color:inherit;cursor:text;transition:background .15s}
+.ruler-num:hover{background:var(--fill)}
+.ruler-unit{font:600 17px var(--font-round);color:var(--fg-2);margin-left:5px}
+.ruler-input{font-size:56px;width:168px;text-align:center;border:0;outline:0;background:var(--fill);border-radius:14px;color:inherit;padding:0}
+.ruler-step{width:44px;height:44px;border-radius:50%;background:var(--fill);color:var(--accent);display:grid;place-items:center;flex:none;transition:transform .12s ease-out,background .15s;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+.ruler-step:active{transform:scale(.88);background:var(--fill-2)}
+.ruler-hint{text-align:center;font-size:13px;color:var(--fg-2);margin-top:4px}
 .ruler{position:relative;height:74px;-webkit-mask:linear-gradient(to right,transparent,#000 22%,#000 78%,transparent);mask:linear-gradient(to right,transparent,#000 22%,#000 78%,transparent)}
-.ruler-scroll{height:100%;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
+.ruler-scroll{height:100%;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;touch-action:pan-x;cursor:grab;-webkit-user-select:none;user-select:none;outline-offset:-3px}
+.ruler-scroll.grabbing{cursor:grabbing}
 .ruler-scroll::-webkit-scrollbar{display:none}
 .ruler-track{height:100%;display:flex;align-items:flex-start;padding:0 calc(50% - 5px);width:max-content}
-.tick{flex:none;width:10px;height:100%;position:relative;scroll-snap-align:center}
+.tick{flex:none;width:10px;height:100%;position:relative}
 .tick::before{content:"";position:absolute;left:50%;top:0;width:1.5px;height:16px;margin-left:-.75px;border-radius:2px;background:var(--fg-3)}
 .tick.m::before{height:30px;background:var(--fg-2)}
 .tick b{position:absolute;top:38px;left:50%;transform:translateX(-50%);font:600 12px var(--font-round);color:var(--fg-2)}
