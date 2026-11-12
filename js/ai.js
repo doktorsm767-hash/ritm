@@ -22,7 +22,18 @@
     if (App.refresh) App.refresh();
   })();
 
-  const mode = () => (sample ? 'claude' : SERVER && !hosted ? 'server' : 'demo');
+  // Есть ли на сервере ключ Claude: true / false, null — пока неизвестно (нет связи).
+  // Пока ключа нет, приложение показывает примеры, а не ошибку; как только ключ появится, ИИ включится сам.
+  let serverOk = null;
+  const checkServer = async () => {
+    if (!SERVER || hosted) return false;
+    try { const r = await fetch(SERVER + '/', { cache: 'no-store' }), j = await r.json(); serverOk = !!(j && j.ok && j.configured); }
+    catch (e) { serverOk = null; }
+    return serverOk;
+  };
+  const serverBoot = checkServer().then(() => { if (App.refresh) App.refresh(); });
+
+  const mode = () => (sample ? 'claude' : SERVER && !hosted && serverOk !== false ? 'server' : 'demo');
   const delay = (ms) => new Promise((r) => setTimeout(r, ms));
   const fail = (msg, code) => { const e = new Error(msg); e.user = msg; e.code = code; return e; };
 
@@ -154,10 +165,13 @@
   // главный вызов: вернёт { data, demo }
   async function ask(kind, prompt, o) {
     o = o || {};
-    await Promise.race([boot, delay(o.files ? 11000 : 3000)]);
+    await Promise.race([Promise.all([boot, serverBoot]), delay(o.files ? 11000 : 3000)]);
     const m = mode();
     if (m === 'claude') return { data: await viaSample(prompt, o), demo: false };
-    if (m === 'server') return { data: await viaServer(kind, prompt, o), demo: false };
+    if (m === 'server') {
+      try { return { data: await viaServer(kind, prompt, o), demo: false }; }
+      catch (e) { if (e.code !== 'not_configured') throw e; serverOk = false; }   // ключа на сервере нет — ниже покажем пример
+    }
     await delay(1300);
     const d = App.data.DEMO[kind];
     if (!d) throw fail('ИИ пока не подключён.', 'no_ai');
@@ -187,7 +201,9 @@
   const J = 'Ответь ТОЛЬКО одним JSON-объектом без пояснений. ';
 
   const api = {
-    mode, ready: () => ready, hosted: () => hosted, hasServer: () => !!SERVER, serverStatus, canPhoto: () => (mode() === 'claude' ? !!imgLimits : true), who, labFlags,
+    mode, ready: () => ready, hosted: () => hosted, hasServer: () => !!SERVER, serverStatus, recheck: checkServer,
+    // версия приложения на claude.ai, где ИИ работает по подписке Claude без ключа
+    aiPage: String((window.RITM_CONFIG && window.RITM_CONFIG.aiPage) || ''), canPhoto: () => (mode() === 'claude' ? !!imgLimits : true), who, labFlags,
 
     parseLab: (files) => ask('lab',
       'На фото — бланк лабораторных анализов человека, который ведёт личный дневник здоровья. Извлеки данные. ' + J +

@@ -15,11 +15,16 @@
   ui.empty = (o) => h('div', { class: 'card empty rise' }, h('span', { class: 'ico soft', style: { '--c': o.color || 'var(--accent)' } }, icon(o.icon, 30)), h('b', null, o.title), h('p', null, o.text), o.action || null);
   ui.aiWait = (text) => h('div', { class: 'ai-wait fade' }, h('div', { class: 'ai-orb' }), h('b', null, text || 'Claude думает…'), h('div', { class: 'sub' }, 'Обычно это занимает до минуты'));
   ui.demoBadge = () => h('span', { class: 'demo-badge' }, icon('info', 13), 'Демо-пример');
+  // ссылка на версию приложения на claude.ai, где ИИ работает по подписке Claude без ключа
+  ui.aiPageLink = (cls) => (!App.ai.hosted() && App.ai.aiPage
+    ? h('a', { class: cls || 'btn sm primary', href: App.ai.aiPage, target: '_blank', rel: 'noopener', style: 'text-decoration:none' }, icon('sparkles', 16), 'Открыть версию с ИИ') : null);
   ui.aiNote = () => {
     const m = App.ai.mode();
-    return m === 'demo' ? h('div', { class: 'note', style: { '--c': 'var(--orange)' } }, h('b', { class: 'h' }, icon('info', 15), 'ИИ не подключён'),
-      'Сейчас показываются примеры ответов, а не разбор ваших данных.',
-      h('div', { style: 'margin-top:10px' }, h('button', { class: 'btn sm tinted', type: 'button', style: '--accent:var(--orange)', onclick: () => ui.aiSettings() }, 'Подробнее'))) : null;
+    return m === 'demo' ? h('div', { class: 'note', style: { '--c': 'var(--orange)' } }, h('b', { class: 'h' }, icon('info', 15), 'Это пример, а не разбор ваших данных'),
+      App.ai.hosted() ? 'Claude спросит разрешение при обращении — подтвердите его.'
+        : 'В этом приложении ИИ пока не подключён. Он уже работает в версии на claude.ai — по вашей подписке Claude, без ключа.',
+      h('div', { style: 'margin-top:10px;display:flex;gap:8px;flex-wrap:wrap' }, ui.aiPageLink(),
+        h('button', { class: 'btn sm tinted', type: 'button', style: '--accent:var(--orange)', onclick: () => ui.aiSettings() }, 'Подробнее'))) : null;
   };
   // выбор фото: с камеры или из галереи
   ui.pickPhoto = (o) => {
@@ -309,13 +314,16 @@
         const m = ai.mode();
         if (m === 'claude') return kidsSet(state, card(true, 'Claude подключён', 'Запросы идут через вашу учётную запись Claude.'));
         if (ai.hosted()) return kidsSet(state, card(false, 'Нужно разрешение', 'При первом обращении Claude спросит разрешение — подтвердите его. Если отказали раньше, обновите страницу.'));
-        if (!ai.hasServer()) return kidsSet(state, card(false, 'ИИ пока не подключён', 'Сейчас показываются примеры ответов. Ничего вводить не нужно: ИИ заработает сам, когда будет подключён сервер приложения.'));
-        kidsSet(state, card(true, 'Claude подключён', 'Проверяю связь с сервером…'));
+        if (!ai.hasServer()) return kidsSet(state, card(false, 'ИИ пока не подключён', 'Сейчас показываются примеры ответов. Ничего вводить не нужно: ИИ заработает сам, когда будет подключён сервер приложения.'), ui.aiPageLink('btn primary block'));
+        kidsSet(state, card(m === 'server', m === 'server' ? 'Claude подключён' : 'Проверяю подключение ИИ', 'Проверяю связь с сервером…'));
         ai.serverStatus().then((st) => {
           if (!state.isConnected) return;
           if (st.ok) kidsSet(state, card(true, 'Claude подключён', st.device ? 'Это устройство подключено. Ничего настраивать не нужно.' : st.enroll ? 'Устройство подключится автоматически при первом запросе.' : 'Сервер работает, но подключение новых устройств закрыто.'));
-          else kidsSet(state, card(false, st.reason === 'network' ? 'Нет связи с сервером ИИ' : 'Сервер ИИ не настроен', st.reason === 'network' ? 'Проверьте интернет и попробуйте ещё раз.' : 'На сервере не задан ключ Claude. Пока показываются примеры.'),
+          else if (st.reason === 'network') kidsSet(state, card(false, 'Нет связи с сервером ИИ', 'Проверьте интернет и попробуйте ещё раз.'),
             h('button', { class: 'btn tinted block', type: 'button', style: 'margin-top:10px', onclick: draw }, icon('refresh', 20), 'Проверить ещё раз'));
+          else kidsSet(state, card(false, 'В этом приложении ИИ пока не подключён', 'Сейчас показываются примеры ответов. ИИ уже работает в версии на claude.ai — по вашей подписке Claude, без ключа и доплат.'),
+            h('div', { class: 'stack', style: 'margin-top:10px;gap:8px' }, ui.aiPageLink('btn primary block'),
+              h('button', { class: 'btn gray block', type: 'button', onclick: () => { ai.recheck().then(() => { draw(); App.refresh(); }); } }, icon('refresh', 20), 'Проверить ещё раз')));
         });
       };
       draw();
