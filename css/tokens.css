@@ -1,0 +1,41 @@
+/* Компоновка: одноэкранное приложение — прокручиваемые экраны под полупрозрачной шапкой с большим заголовком,
+   плавающая стеклянная панель вкладок с круглой кнопкой действий, листы поднимаются снизу. */
+:root{
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI",Roboto,system-ui,sans-serif;
+  --font-round:ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",system-ui,sans-serif;
+  --bg:#F2F2F7; --bg-elev:#F2F2F7; --desk:#E4E4EA;
+  --card:#FFFFFF; --card-elev:#FFFFFF; --seg:#FFFFFF;
+  --fg:#08080A; --fg-2:rgba(60,60,67,.64); --fg-3:rgba(60,60,67,.3);
+  --sep:rgba(60,60,67,.16); --fill:rgba(118,118,128,.12); --fill-2:rgba(118,118,128,.22);
+  --glass:rgba(250,250,252,.74); --glass-edge:rgba(255,255,255,.7);
+  --toast:rgba(28,28,30,.94); --toast-fg:#FFFFFF;
+  --accent:#FF2D55; --accent-deep:#E0143C;
+  --pink:#FF375F; --red:#FF3B30; --orange:#FF9500; --yellow:#E6A800; --green:#34C759; --mint:#00B8AE;
+  --teal:#30A5C7; --blue:#007AFF; --indigo:#5856D6; --purple:#AF52DE;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#000000; --bg-elev:#1C1C1E; --desk:#0A0A0C;
+    --card:#1C1C1E; --card-elev:#2C2C2E; --seg:#636366;
+    --fg:#FFFFFF; --fg-2:rgba(235,235,245,.64); --fg-3:rgba(235,235,245,.28);
+    --sep:rgba(120,120,128,.36); --fill:rgba(118,118,128,.24); --fill-2:rgba(118,118,128,.36);
+    --glass:rgba(34,34,37,.72); --glass-edge:rgba(255,255,255,.1);
+    --toast:rgba(242,242,247,.96); --toast-fg:#000000;
+    --accent:#FF375F; --accent-deep:#D81B45;
+    --pink:#FF375F; --red:#FF453A; --orange:#FF9F0A; --yellow:#FFD60A; --green:#30D158; --mint:#63E6E2;
+    --teal:#40C8E0; --blue:#0A84FF; --indigo:#7D7AFF; --purple:#BF5AF2;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#000000; --bg-elev:#1C1C1E; --desk:#0A0A0C;
+  --card:#1C1C1E; --card-elev:#2C2C2E; --seg:#636366;
+  --fg:#FFFFFF; --fg-2:rgba(235,235,245,.64); --fg-3:rgba(235,235,245,.28);
+  --sep:rgba(120,120,128,.36); --fill:rgba(118,118,128,.24); --fill-2:rgba(118,118,128,.36);
+  --glass:rgba(34,34,37,.72); --glass-edge:rgba(255,255,255,.1);
+  --toast:rgba(242,242,247,.96); --toast-fg:#000000;
+  --accent:#FF375F; --accent-deep:#D81B45;
+  --pink:#FF375F; --red:#FF453A; --orange:#FF9F0A; --yellow:#FFD60A; --green:#30D158; --mint:#63E6E2;
+  --teal:#40C8E0; --blue:#0A84FF; --indigo:#7D7AFF; --purple:#BF5AF2;
+  color-scheme:dark;
+}
