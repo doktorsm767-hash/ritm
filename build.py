@@ -30,6 +30,11 @@ html = (
     '<div id="app"></div>\n'
     '<script>\n' + js + '\n</script>\n'
 )
+# Сервер ИИ для Cloudflare Pages: тот же код, что server/worker.js, под именем, которое ждёт Pages.
+# (Домен workers.dev недоступен из сети пользователя, pages.dev — доступен.)
+os.makedirs(os.path.join(ROOT, 'server', 'pages'), exist_ok=True)
+write('server/pages/_worker.js', read('server/worker.js'))
+
 os.makedirs(os.path.join(ROOT, 'artifact'), exist_ok=True)
 write('artifact/ritm.html', html)
 print('version', ver, '| artifact/ritm.html', round(len(html.encode('utf-8')) / 1024), 'KB')   # латиницей: консоль Windows не всегда печатает кириллицу
