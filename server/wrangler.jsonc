@@ -1,0 +1,14 @@
+// Настройки сервера ИИ для Cloudflare Workers. Развёртывание: Cloudflare сам собирает сервер из этой папки при каждом обновлении репозитория.
+{
+  "name": "ritm-ai",
+  "main": "worker.js",
+  "compatibility_date": "2026-06-01",
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": { "enabled": true },
+  "vars": {
+    // "1" — новые устройства получают пропуск автоматически; "0" — подключение новых устройств закрыто
+    "ENROLL_OPEN": "1"
+  }
+  // Ключ Claude задаётся отдельно, секретом ANTHROPIC_API_KEY в настройках сервера, и в репозиторий не попадает.
+}
