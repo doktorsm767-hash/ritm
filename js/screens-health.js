@@ -86,7 +86,8 @@
       tick = setInterval(() => { clock.textContent = fmt(Math.floor((Date.now() - started) / 1000)); if (rest) paintRest(); }, 500);
       kidsAdd(b, h('div', { class: 'stack' }, day.focus ? h('p', { class: 'caption' }, 'Акцент: ' + day.focus + '. Перед началом — 5 минут разминки.') : null,
         h('div', { class: 'list' }, day.exercises.map((e, i) => h('div', { class: 'ex' },
-          h('div', { class: 'n' }, h('b', null, e.name), h('span', null, e.sets + ' × ' + e.reps + (e.rest ? ' · отдых ' + e.rest + ' с' : '')), e.tip ? h('span', { style: 'display:block;margin-top:3px' }, e.tip) : null),
+          ui.coachThumb(e),
+          h('button', { class: 'n', type: 'button', style: 'text-align:left', onclick: () => ui.coach(e) }, h('b', null, e.name), h('span', null, e.sets + ' × ' + e.reps + (e.rest ? ' · отдых ' + e.rest + ' с' : '')), e.tip ? h('span', { style: 'display:block;margin-top:3px' }, e.tip) : null),
           h('div', { class: 'sets' }, done[i].map((v, j) => { const btn = h('button', { class: 'set', type: 'button', 'aria-label': 'Подход ' + (j + 1), onclick: () => {
             done[i][j] = !done[i][j]; btn.classList.toggle('on', done[i][j]); kidsSet(btn, done[i][j] ? icon('check', 15) : String(j + 1)); haptic(12); paint();
             if (done[i][j] && count() < total) { rest = { total: e.rest || 60, until: Date.now() + (e.rest || 60) * 1000 }; App.memo.rest = 1; paintRest(); } } }, String(j + 1)); return btn; })))))));
@@ -96,6 +97,34 @@
         store.state.workouts.push({ id: uid(), date: App.dkey(), day: idx, title: day.title, minutes: Math.max(1, Math.round((Date.now() - started) / 60000)) });
         store.commit(); s.close(); toast('Тренировка засчитана', { icon: 'flame', color: 'var(--orange)' });
       } }, icon('check', 20), 'Завершить тренировку'));
+    } });
+  };
+
+  /* ---------- тренер ---------- */
+  ui.coachThumb = (e) => {
+    const b = h('button', { class: 'coach-thumb', type: 'button', 'aria-label': 'Как выполнять: ' + e.name, onclick: () => ui.coach(e) });
+    const svg = App.coach.svgNode(); b.appendChild(svg);
+    requestAnimationFrame(() => App.coach.mount(svg, App.coach.find(e.name), { speed: 0.9 }));
+    return b;
+  };
+  ui.coach = function (e) {
+    const id = App.coach.find(e.name), a = App.coach.ANIMS[id], cue = App.coach.CUES[id] || App.coach.CUES.march;
+    sheet({ title: 'Тренер', build: (b) => {
+      const phase = h('div', { class: 'coach-phase' }, a.labels[0]);
+      const svg = App.coach.svgNode();
+      let ctl = null, slow = false;
+      const playBtn = h('button', { type: 'button', 'aria-label': 'Пауза', onclick: () => { ctl.pause(!ctl.paused); kidsSet(playBtn, icon(ctl.paused ? 'play' : 'pause', 16)); playBtn.setAttribute('aria-label', ctl.paused ? 'Продолжить' : 'Пауза'); } }, icon('pause', 16));
+      const slowBtn = h('button', { type: 'button', 'aria-label': 'Медленно', title: 'Медленно', onclick: () => { slow = !slow; ctl.setSpeed(slow ? 0.45 : 1); slowBtn.style.color = slow ? 'var(--accent)' : ''; haptic(6); } }, icon('clock', 16));
+      const stage = h('div', { class: 'coach-stage' }, svg, phase, h('div', { class: 'coach-ctrl' }, slowBtn, playBtn));
+      kidsAdd(b, h('div', { class: 'stack' },
+        stage,
+        h('div', null, h('h2', { style: 'font-size:24px;letter-spacing:-.02em;line-height:1.15' }, e.name),
+          h('div', { class: 'chips', style: 'margin-top:8px' }, e.sets ? h('span', { class: 'chip' }, e.sets + ' × ' + (e.reps || '')) : null, e.rest ? h('span', { class: 'chip' }, icon('clock', 13), 'отдых ' + e.rest + ' с') : null)),
+        e.tip ? h('div', { class: 'note', style: { '--c': 'var(--purple)' } }, h('b', { class: 'h' }, icon('sparkles', 15), 'Совет'), e.tip) : null,
+        h('div', null, h('div', { class: 'caption', style: 'margin-bottom:8px' }, 'Как выполнять'), h('div', { class: 'card' }, h('ol', { class: 'coach-steps' }, cue.steps.map((x) => h('li', null, x))))),
+        h('div', { class: 'note', style: { '--c': 'var(--orange)' } }, h('b', { class: 'h' }, icon('info', 15), 'Частые ошибки'), h('ul', null, cue.errs.map((x) => h('li', null, x)))),
+        h('div', { class: 'note', style: { '--c': 'var(--blue)' } }, h('b', { class: 'h' }, icon('drop', 15), 'Дыхание'), cue.breath)));
+      requestAnimationFrame(() => { ctl = App.coach.mount(svg, id, { onPhase: (i) => { phase.textContent = a.labels[i] || a.labels[0]; } }); });
     } });
   };
 

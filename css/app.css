@@ -403,3 +403,37 @@ h1,h2,h3,p{margin:0}
 @media (prefers-contrast:more){
   .card,.list,.option{box-shadow:inset 0 0 0 1px var(--fg-2)}
 }
+
+/* ---------- тренер ---------- */
+.coach-svg{display:block;width:100%;height:100%;overflow:visible}
+.coach-svg .cs{stroke:var(--coach-body);stroke-linecap:round;fill:none}
+.coach-svg .cs.fc{stroke:url(#none) var(--accent);stroke:var(--accent)}
+.coach-svg .cs.far{opacity:.38}
+.coach-svg .tor{stroke-width:15}.coach-svg .tor.tf{stroke-width:24}
+.coach-svg .th{stroke-width:12}.coach-svg .shn{stroke-width:10}.coach-svg .ft{stroke-width:7}
+.coach-svg .ua{stroke-width:9}.coach-svg .fa{stroke-width:8}
+.coach-svg .chead{fill:var(--coach-body)}
+.coach-svg .cfl{stroke:var(--sep);stroke-width:1.5}
+.coach-svg .csh{fill:var(--fg);opacity:.08}
+.coach-svg .cpad{stroke:var(--coach-gear);stroke-width:7;stroke-linecap:round}
+.coach-svg .cleg{stroke:var(--coach-gear);stroke-width:3.5;stroke-linecap:round}
+.coach-svg .cbox{fill:var(--coach-gear)}
+.coach-svg .cpul{fill:var(--card);stroke:var(--coach-gear);stroke-width:2.5}
+.coach-svg .ccab{stroke:var(--fg-3);stroke-width:1.6}
+.coach-svg .cdb{fill:var(--fg);opacity:.82}
+.coach-svg .cplate{fill:var(--card);stroke:var(--fg);stroke-width:4;opacity:.9}
+:root{--coach-body:color-mix(in srgb,var(--fg) 78%,var(--bg));--coach-gear:color-mix(in srgb,var(--fg) 16%,var(--bg))}
+.coach-thumb{width:64px;height:52px;flex:none;border-radius:13px;background:var(--fill);padding:2px;transition:transform .12s ease-out}
+.coach-thumb:active{transform:scale(.92)}
+.coach-stage{position:relative;aspect-ratio:240/190;width:100%;max-width:100%;border-radius:24px;overflow:hidden;
+  background:radial-gradient(120% 90% at 50% 15%,color-mix(in srgb,var(--accent) 9%,var(--card-elev)),var(--card-elev) 70%)}
+.coach-stage .coach-svg{padding:6px 10px 2px}
+.coach-phase{position:absolute;left:12px;top:12px;padding:6px 12px;border-radius:999px;font-size:13px;font-weight:600;
+  background:var(--glass);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);transition:opacity .2s}
+.coach-ctrl{position:absolute;right:10px;top:10px;display:flex;gap:6px}
+.coach-ctrl button{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--glass);color:var(--fg);
+  -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+.coach-steps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;counter-reset:st}
+.coach-steps li{display:flex;gap:12px;align-items:flex-start;font-size:15px;line-height:1.4;counter-increment:st}
+.coach-steps li::before{content:counter(st);flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;
+  background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent);font:700 13px var(--font-round)}
