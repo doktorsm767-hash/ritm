@@ -40,7 +40,7 @@ jobs:
           set -euxo pipefail
           mkdir build-apk && cd build-apk
           npm init -y > /dev/null
-          npm install --no-audit --no-fund @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
+          npm install --no-audit --no-fund @capacitor/core@8.6.0 @capacitor/cli@8.6.0 @capacitor/android@8.6.0 @capgo/capacitor-health@8.11.13
           cp -r ../apk/www www
           cp ../apk/capacitor.config.json capacitor.config.json
           npx cap add android

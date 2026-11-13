@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Политика конфиденциальности, которую Health Connect показывает при запросе доступа -->
+    <string name="health_connect_privacy_policy_url">https://doktorsm767-hash.github.io/ritm/privacy.html</string>
+</resources>

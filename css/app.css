@@ -476,3 +476,10 @@ h1,h2,h3,p{margin:0}
 .big-h{color:var(--red);animation:beat 1s ease-in-out infinite}
 @keyframes beat{0%,100%{transform:scale(1)}15%{transform:scale(1.22)}30%{transform:scale(1)}45%{transform:scale(1.12)}}
 @media (prefers-reduced-motion:reduce){.hr-chip.on .hr-heart,.big-h{animation:none}}
+
+/* ---------- данные с часов ---------- */
+.wgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.wstat{display:flex;gap:10px;align-items:center;min-width:0}
+.wstat b{display:block;font-size:19px;font-weight:700}
+.wstat b small{font-size:12px;color:var(--fg-2);font-weight:600}
+.wstat span:not(.ico){font-size:12px;color:var(--fg-2)}

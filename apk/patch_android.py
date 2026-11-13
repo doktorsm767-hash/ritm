@@ -33,7 +33,12 @@ for root, dirs, files in os.walk(res):
             os.remove(os.path.join(root, f)); removed += 1
 shutil.copytree(os.path.join(here, 'res'), res, dirs_exist_ok=True)
 
-# 3. Номер версии = номер сборки
+# 3. Health Connect требует Android 8.0+ (minSdk 26)
+vp = os.path.join(proj, 'variables.gradle')
+if os.path.exists(vp):
+    v = read(vp); v = re.sub(r'minSdkVersion\s*=\s*\d+', 'minSdkVersion = 26', v); write(vp, v)
+
+# 4. Номер версии = номер сборки
 p = os.path.join(proj, 'app', 'build.gradle'); g = read(p)
 g, n1 = re.subn(r'versionCode\s+\d+', 'versionCode ' + build, g, count=1)
 g, n2 = re.subn(r'versionName\s+"[^"]*"', 'versionName "0.1.' + build + '"', g, count=1)

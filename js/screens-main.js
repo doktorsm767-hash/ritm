@@ -191,6 +191,18 @@
       tile({ i: 2, icon: 'moon', c: 'var(--indigo)', title: 'Сон', val: day.sleep != null ? nf(day.sleep, 1) : '—', unit: day.sleep != null ? 'ч' : '', sub: day.sleep != null ? 'цель ' + t.sleep + ' ч' : 'Отметьте сон', go: () => ui.sleep(), extra: App.spark(last7.map((x) => x.sleep), 'var(--indigo)') }),
       tile({ i: 3, icon: 'walk', c: 'var(--green)', title: 'Шаги', val: day.steps != null ? nf(day.steps) : '—', unit: '', sub: 'цель ' + nf(t.steps), go: () => ui.steps(), extra: h('div', { style: 'margin-top:6px' }, bar({ id: 'today:steps', value: (day.steps || 0) / t.steps, color: 'var(--green)' })) }),
       tile({ i: 4, icon: 'scale', c: 'var(--purple)', title: 'Вес', val: lw ? nf(lw.kg, 1) : '—', unit: 'кг', sub: dw != null ? (dw > 0 ? '+' : '') + nf(dw, 1) + ' кг за период' : 'Взвесьтесь утром', go: () => ui.weight(), extra: App.spark(w.slice(-9).map((x) => x.kg), 'var(--purple)') })));
+    // данные с часов за сегодня (или вчера, если сегодня ещё пусто)
+    const wd = day.watch || (store.peek(App.addDays(today, -1)).watch);
+    if (wd && (wd.rest || wd.hrAvg || wd.spo2 || wd.kcal || wd.km)) {
+      const stat = (ic, c, v, u, l) => (v ? h('div', { class: 'wstat' }, h('span', { class: 'ico soft', style: { '--c': c } }, icon(ic, 16)), h('div', null, h('b', { class: 'num' }, v, h('small', null, u)), h('span', null, l))) : null);
+      const sl = wd.sleep;
+      body.push(h('div', { class: 'section' }, ui.head('С часов', 'Часы', () => ui.watch())),
+        h('div', { class: 'card rise' }, h('div', { class: 'wgrid' },
+          stat('heart', 'var(--red)', wd.rest, ' уд/мин', 'пульс в покое'), stat('pulse', 'var(--pink)', wd.hrAvg, ' уд/мин', 'средний пульс'),
+          stat('drop', 'var(--blue)', wd.spo2, '%', 'кислород'), stat('flame', 'var(--orange)', wd.kcal || wd.active, ' ккал', 'потрачено'),
+          stat('walk', 'var(--green)', wd.km ? nf(wd.km, 1) : null, ' км', 'пройдено')),
+          sl ? h('div', { class: 'sub', style: 'margin-top:12px' }, 'Сон: глубокий ' + Math.round(sl.deep) + ' мин · лёгкий ' + Math.round(sl.light) + ' мин · REM ' + Math.round(sl.rem) + ' мин') : null));
+    }
 
     // тренировка
     const tp = s.trainPlan;
