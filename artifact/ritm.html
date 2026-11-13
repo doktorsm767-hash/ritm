@@ -1740,13 +1740,13 @@ window.RITM_CONFIG = {
   // выбор фото: с камеры или из галереи
   // своя камера внутри приложения (getUserMedia) — системное окно выбора файла на части телефонов камеру не открывает
   const liveCam = () => !(window.claude && window.claude.use) && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) && window.isSecureContext;
-  // невидимое поле выбора файла внутри <label>: нажатие пользователя открывает системный выбор без программного click()
-  const fileLabel = (o, cap, content, cls) => {
-    const inp = h('input', { type: 'file', accept: o.accept || 'image/jpeg,image/png,image/webp', class: 'vh' });
+  // системный выбор файла: вызывать СИНХРОННО из обработчика нажатия (иначе телефон и claude.ai его блокируют)
+  const openInput = (o, cap, before) => {
+    const inp = h('input', { type: 'file', accept: o.accept || 'image/jpeg,image/png,image/webp', hidden: true, id: 'pick-' + App.uid() });
     if (cap) inp.setAttribute('capture', 'environment');
     if (o.multiple) inp.multiple = true;
-    inp.addEventListener('change', () => { const f = Array.from(inp.files || []); inp.value = ''; if (f.length) { if (o.beforeFiles) o.beforeFiles(); o.onFiles(f); } });
-    return h('label', { class: cls || 'row tap has-icon' }, inp, content);
+    inp.addEventListener('change', () => { const f = Array.from(inp.files || []); inp.remove(); if (f.length) { if (before) before(); o.onFiles(f); } });
+    document.body.appendChild(inp); inp.click();
   };
   ui.camera = (o) => {
     let stream = null, done = false;
@@ -1760,7 +1760,7 @@ window.RITM_CONFIG = {
       const doneBtn = h('button', { class: 'cam-done', type: 'button', hidden: true, onclick: () => finish() }, 'Готово');
       const shutter = h('button', { class: 'cam-shutter', type: 'button', 'aria-label': 'Сделать снимок', disabled: true, onclick: () => snap() });
       const finish = () => { if (!shots.length) return; done = true; stop(); s.close(); setTimeout(() => o.onFiles(shots.slice()), 120); };
-      const native = fileLabel(Object.assign({}, o, { beforeFiles: () => { done = true; stop(); s.close(); } }), true, h('span', null, 'Открыть камеру телефона'), 'cam-native');
+      const native = h('button', { class: 'cam-native', type: 'button', onclick: () => openInput(o, true, () => { done = true; stop(); s.close(); }) }, 'Открыть камеру телефона');
       kidsAdd(b, h('div', { class: 'pc-stage' }, video,
         h('div', { class: 'pc-top' }, h('div', { class: 'pc-count' }, h('div', { style: 'font-weight:700;font-size:17px' }, o.title || 'Камера'), o.tip ? h('div', { class: 'pc-reps-l' }, o.tip) : null),
           h('div', { class: 'pc-tools' }, h('button', { class: 'pc-btn', type: 'button', 'aria-label': 'Закрыть', onclick: () => s.close() }, icon('xmark', 16)))),
@@ -1797,12 +1797,11 @@ window.RITM_CONFIG = {
   ui.pickPhoto = (o) => {
     // choose: сначала спросить — камера или галерея
     if (o.choose) {
-      const close = () => s.close();
-      const camRow = liveCam()
-        ? ui.row({ icon: 'camera', color: 'var(--pink)', title: 'Сфотографировать', sub: 'Откроется камера', onclick: () => { s.close(); setTimeout(() => ui.camera(o), 160); } })
-        : fileLabel(Object.assign({}, o, { beforeFiles: close }), true, [h('span', { class: 'ico', style: { '--c': 'var(--pink)' } }, icon('camera', 18)), h('div', { class: 'row-main' }, h('div', { class: 'row-title' }, 'Сфотографировать'), h('div', { class: 'row-sub' }, 'Откроется камера'))]);
-      const galRow = fileLabel(Object.assign({}, o, { beforeFiles: close }), false, [h('span', { class: 'ico', style: { '--c': 'var(--blue)' } }, icon('photo', 18)), h('div', { class: 'row-main' }, h('div', { class: 'row-title' }, 'Выбрать из галереи'), h('div', { class: 'row-sub' }, o.multiple ? 'Можно несколько фото' : 'Готовое фото'))]);
-      const s = sheet({ title: o.title || 'Фото', detent: 'auto', build: (b) => kidsAdd(b, h('div', { class: 'list' }, camRow, galRow)) });
+      // выбор открывается сразу в обработчике нажатия, лист закрывается после
+      const pick = (cap) => { if (cap && liveCam()) { s.close(); setTimeout(() => ui.camera(o), 160); return; } openInput(o, cap, null); s.close(); };
+      const s = sheet({ title: o.title || 'Фото', detent: 'auto', build: (b) => kidsAdd(b, h('div', { class: 'list' },
+        ui.row({ icon: 'camera', color: 'var(--pink)', title: 'Сфотографировать', sub: 'Откроется камера', onclick: () => pick(true) }),
+        ui.row({ icon: 'photo', color: 'var(--blue)', title: 'Выбрать из галереи', sub: o.multiple ? 'Можно несколько фото' : 'Готовое фото', onclick: () => pick(false) }))) });
       return;
     }
     if (o.capture && liveCam()) return ui.camera(o);
