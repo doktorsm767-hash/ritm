@@ -3,11 +3,6 @@
   "appName": "Ритм",
   "webDir": "www",
   "backgroundColor": "#00000000",
-  "server": {
-    "url": "https://doktorsm767-hash.github.io/ritm/",
-    "errorPath": "offline.html",
-    "allowNavigation": ["doktorsm767-hash.github.io"]
-  },
   "android": {
     "adjustMarginsForEdgeToEdge": "force"
   }

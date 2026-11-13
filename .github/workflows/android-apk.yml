@@ -1,13 +1,17 @@
 name: Android APK
 
-# Собирает тестовый APK: оболочка Capacitor, которая открывает сайт приложения.
-# Само приложение обновляется через сайт, пересобирать APK нужно только при изменении папки apk/.
+# Собирает тестовый APK: всё приложение лежит внутри APK и открывается без обращения к сайту
+# (сайт github.io в сети пользователя открывается нестабильно). Пересобирается при любом изменении приложения.
 on:
   workflow_dispatch:
   push:
     branches: [main]
     paths:
       - 'apk/**'
+      - 'js/**'
+      - 'css/**'
+      - 'index.html'
+      - 'vendor/**'
       - '.github/workflows/android-apk.yml'
 
 permissions:
@@ -41,7 +45,9 @@ jobs:
           mkdir build-apk && cd build-apk
           npm init -y > /dev/null
           npm install --no-audit --no-fund @capacitor/core@8.6.0 @capacitor/cli@8.6.0 @capacitor/android@8.6.0 @capgo/capacitor-health@8.11.13
-          cp -r ../apk/www www
+          mkdir www
+          cp -r ../index.html ../privacy.html ../manifest.webmanifest ../icon*.png ../icon.svg ../css ../js ../vendor www/
+          ls -la www
           cp ../apk/capacitor.config.json capacitor.config.json
           npx cap add android
           python3 ../apk/patch_android.py android

@@ -3871,7 +3871,8 @@ window.RITM_CONFIG = {
   else App.ui.onboarding();
 
   // автономная PWA: офлайн-кэш оболочки (на claude.ai сервис-воркеры недоступны)
-  if (!(window.claude && window.claude.use) && 'serviceWorker' in navigator && /^https:|^http:\/\/(localhost|127\.0\.0\.1)/.test(location.href)) {
+  const native = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  if (!native && !(window.claude && window.claude.use) && 'serviceWorker' in navigator && /^https:|^http:\/\/(localhost|127\.0\.0\.1)/.test(location.href)) {
     window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
   }
 })();
