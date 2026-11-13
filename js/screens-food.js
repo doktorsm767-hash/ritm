@@ -253,7 +253,7 @@
     } });
   }
   function fridgePhoto() {
-    ui.pickPhoto({ multiple: true, onFiles: (files) => {
+    ui.pickPhoto({ choose: true, title: 'Фото холодильника', multiple: true, onFiles: (files) => {
       const s = sheet({ title: 'Продукты на фото', build: (b) => runAI(b, 'Смотрю, что есть в холодильнике…', () => App.ai.fridgePhoto(files), (d, demo) => {
         const items = (d.items || []).filter((x) => x && x.name).map((x) => ({ name: String(x.name), qty: String(x.qty || ''), cat: CATS.indexOf(x.cat) >= 0 ? x.cat : 'Другое', on: true }));
         if (!items.length) return kidsSet(b, errorView('На фото не удалось распознать продукты. Попробуйте снять ближе и при хорошем свете.'));

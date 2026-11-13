@@ -28,6 +28,14 @@
   };
   // выбор фото: с камеры или из галереи
   ui.pickPhoto = (o) => {
+    // choose: сначала спросить — камера или галерея (на Android без capture показывается только галерея)
+    if (o.choose) {
+      const next = (cap) => { s.close(); setTimeout(() => ui.pickPhoto(Object.assign({}, o, { choose: false, capture: cap })), 160); };
+      const s = sheet({ title: o.title || 'Фото', detent: 'auto', build: (b) => kidsAdd(b, h('div', { class: 'list' },
+        ui.row({ icon: 'camera', color: 'var(--pink)', title: 'Сфотографировать', sub: 'Откроется камера', onclick: () => next(true) }),
+        ui.row({ icon: 'photo', color: 'var(--blue)', title: 'Выбрать из галереи', sub: o.multiple ? 'Можно несколько фото' : 'Готовое фото', onclick: () => next(false) }))) });
+      return;
+    }
     const inp = h('input', { type: 'file', accept: o.accept || 'image/jpeg,image/png,image/webp', hidden: true, id: 'pick-' + App.uid() });
     if (o.capture) inp.setAttribute('capture', 'environment');
     if (o.multiple) inp.multiple = true;
