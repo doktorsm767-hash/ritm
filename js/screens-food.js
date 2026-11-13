@@ -205,12 +205,21 @@
     out.push(h('div', { class: 'card rise', style: 'display:flex;flex-direction:column;gap:12px' },
       h('div', { style: 'display:flex;gap:14px;align-items:center' }, h('span', { class: 'ico lg', style: { '--c': 'var(--orange)' } }, icon('fridge', 24)),
         h('div', null, h('div', { style: 'font-weight:700;font-size:19px' }, s.fridge.length ? s.fridge.length + ' ' + App.plural(s.fridge.length, 'продукт', 'продукта', 'продуктов') : 'Холодильник пуст'), h('div', { class: 'sub' }, 'ИИ подскажет, что приготовить из того, что есть'))),
-      h('button', { class: 'btn primary block', type: 'button', disabled: !s.fridge.length, onclick: () => ui.recipes() }, icon('sparkles', 20), 'Что приготовить?'),
-      h('div', { class: 'btn-row' }, h('button', { class: 'btn tinted', type: 'button', onclick: () => fridgePhoto() }, icon('camera', 20), 'Фото'), h('button', { class: 'btn gray', type: 'button', onclick: () => ui.fridgeAdd() }, icon('plus', 20), 'Добавить'))));
-    CATS.forEach((c) => {
-      const items = s.fridge.filter((x) => (CATS.indexOf(x.cat) >= 0 ? x.cat : 'Другое') === c); if (!items.length) return;
-      out.push(h('div', { class: 'caption', style: 'margin:16px 0 6px;text-transform:uppercase;letter-spacing:.04em;font-weight:600' }, c));
-      out.push(h('div', { class: 'list' }, items.map((x) => ui.row({ icon: 'leaf', soft: true, color: CATC[c], title: x.name, val: x.qty || '', chev: false, onclick: () => fridgeItem(x) }))));
+      h('button', { class: 'btn primary block', type: 'button', onclick: (e) => ui.fridgeVideo(e) }, icon('video', 20), 'Снять видео и рассказать'),
+      s.fridge.length ? h('button', { class: 'btn tinted block', type: 'button', style: '--accent:var(--purple)', onclick: () => ui.stock() }, icon('sparkles', 20), 'Запасы и что приготовить') : null,
+      h('div', { class: 'btn-row' }, h('button', { class: 'btn gray', type: 'button', onclick: () => fridgePhoto() }, icon('camera', 20), 'Фото'), h('button', { class: 'btn gray', type: 'button', onclick: () => ui.fridgeAdd() }, icon('plus', 20), 'Добавить'))));
+    const soon = s.fridge.filter((x) => { const d = daysLeft(x); return d != null && d <= 2; });
+    if (soon.length) out.push(h('div', { class: 'note', style: { '--c': 'var(--orange)', marginTop: '12px' } }, h('b', { class: 'h' }, icon('info', 15), 'Съешьте в первую очередь'), soon.map((x) => x.name + ' — ' + expiry(x).t).join(' · ')));
+    const zoneOf = (x) => (x.zone === 'freezer' ? 'freezer' : 'fridge');
+    const zones = s.fridge.some((x) => zoneOf(x) === 'freezer') ? [['fridge', 'Холодильник'], ['freezer', 'Морозилка']] : [['fridge', '']];
+    zones.forEach(([z, zt]) => {
+      const inZone = s.fridge.filter((x) => zoneOf(x) === z); if (!inZone.length) return;
+      if (zt) out.push(h('div', { class: 'section-head', style: 'margin-top:22px' }, h('h2', null, icon(z === 'freezer' ? 'snow' : 'fridge', 20), ' ', zt), h('span', { class: 'caption' }, inZone.length + '')));
+      CATS.forEach((c) => {
+        const items = inZone.filter((x) => (CATS.indexOf(x.cat) >= 0 ? x.cat : 'Другое') === c).sort((a, b) => (daysLeft(a) == null ? 999 : daysLeft(a)) - (daysLeft(b) == null ? 999 : daysLeft(b))); if (!items.length) return;
+        out.push(h('div', { class: 'caption', style: 'margin:16px 0 6px;text-transform:uppercase;letter-spacing:.04em;font-weight:600' }, c));
+        out.push(h('div', { class: 'list' }, items.map((x) => { const e = expiry(x); return ui.row({ icon: z === 'freezer' ? 'snow' : 'leaf', soft: true, color: z === 'freezer' ? 'var(--teal)' : CATC[c], title: x.name, sub: e ? h('span', { style: e.c ? 'color:' + e.c : '' }, e.t) : null, val: x.qty || '', chev: false, onclick: () => fridgeItem(x) }); })));
+      });
     });
     out.push(h('div', { class: 'section' }, ui.head('Список покупок', 'Добавить', () => shoppingAdd())));
     if (!s.shopping.length) out.push(h('p', { class: 'caption' }, 'Сюда попадают продукты из меню и рецептов, а также то, что вы отсканировали в магазине.'));
@@ -225,11 +234,22 @@
     }
     return out;
   }
+  // сколько дней ещё хранится продукт
+  const daysLeft = (x) => (x && x.until ? Math.round((App.parseKey(x.until) - App.parseKey(App.dkey())) / 864e5) : null);
+  const expiry = (x) => {
+    const d = daysLeft(x); if (d == null) return null;
+    const t = d < 0 ? 'срок вышел' : d === 0 ? 'годен сегодня' : d > 60 ? 'хранится ~' + Math.round(d / 30) + ' мес.' : 'ещё ~' + d + ' ' + App.plural(d, 'день', 'дня', 'дней');
+    return { t: t, c: d <= 1 ? 'var(--red)' : d <= 3 ? 'var(--orange)' : '' };
+  };
+  App.fridgeKit = { CATS, CATC, daysLeft, expiry, bju, open: () => { segId = 'fridge'; App.go('food', { keep: true }); } };
   function fridgeItem(x) {
     const s = sheet({ title: x.name, detent: 'auto', build: (b) => {
       const q = h('input', { id: 'fi-qty', value: x.qty || '', placeholder: 'например, 500 г' });
-      kidsAdd(b, h('div', { class: 'stack' }, h('div', { class: 'list' }, h('div', { class: 'field' }, h('label', { for: 'fi-qty' }, 'Количество'), q)),
-        h('div', { class: 'btn-row' }, h('button', { class: 'btn primary', type: 'button', onclick: () => { x.qty = q.value.trim(); store.commit(); s.close(); } }, 'Сохранить'),
+      const until = h('input', { id: 'fi-until', type: 'date', value: x.until || '' });
+      let zone = x.zone === 'freezer' ? 'freezer' : 'fridge';
+      const zb = h('div', { class: 'chips' }); const drawZ = () => kidsSet(zb, ...[['fridge', 'Холодильник'], ['freezer', 'Морозилка']].map(([v, t]) => h('button', { class: 'pillbtn' + (zone === v ? ' on' : ''), type: 'button', onclick: () => { zone = v; drawZ(); } }, t))); drawZ();
+      kidsAdd(b, h('div', { class: 'stack' }, zb, h('div', { class: 'list' }, h('div', { class: 'field' }, h('label', { for: 'fi-qty' }, 'Количество'), q), h('div', { class: 'field' }, h('label', { for: 'fi-until' }, 'Годен до'), until)),
+        h('div', { class: 'btn-row' }, h('button', { class: 'btn primary', type: 'button', onclick: () => { x.qty = q.value.trim(); x.zone = zone; x.until = until.value || null; store.commit(); s.close(); } }, 'Сохранить'),
           h('button', { class: 'btn gray danger', type: 'button', onclick: () => { store.state.fridge = store.state.fridge.filter((y) => y.id !== x.id); store.commit(); s.close(); } }, 'Закончилось'))));
     } });
   }

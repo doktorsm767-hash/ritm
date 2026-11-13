@@ -37,6 +37,7 @@
     inp.addEventListener('change', () => { const f = Array.from(inp.files || []); inp.remove(); if (f.length) { if (before) before(); o.onFiles(f); } });
     document.body.appendChild(inp); inp.click();
   };
+  ui.openInput = openInput; ui.liveCam = liveCam;
   ui.camera = (o) => {
     let stream = null, done = false;
     const shots = [];

@@ -22,7 +22,7 @@
 
 const ALLOWED_ORIGINS = ['https://doktorsm767-hash.github.io', 'https://localhost', 'http://localhost:8765'];
 const MODEL_DEFAULT = 'claude-opus-5-5';
-const EFFORT = { lab: 'medium', mealPlan: 'medium', trainPlan: 'medium' };   // для остальных задач — low
+const EFFORT = { lab: 'medium', mealPlan: 'medium', trainPlan: 'medium', stock: 'medium' };   // для остальных задач — low
 const MAX_BODY = 8 * 1024 * 1024;
 const RATE = { max: 40, windowMs: 10 * 60 * 1000 };
 const API = 'https://api.anthropic.com/v1/messages';
