@@ -262,6 +262,7 @@
           h('div', { class: 'list' },
             ui.row({ icon: 'sparkles', color: 'var(--purple)', title: 'ИИ-помощник', sub: m === 'demo' ? 'Не подключён — показываются примеры' : 'Claude подключён', onclick: () => ui.aiSettings(() => draw(b)) })),
           h('div', { class: 'list' },
+            ui.row({ icon: 'heart', color: 'var(--red)', title: 'Часы', sub: App.hr && App.hr.live() ? 'Пульс ' + App.hr.bpm + ' уд/мин' : 'Пульс в реальном времени с Huawei и других часов', onclick: () => ui.watch() }),
             App.sync && App.sync.active() ? ui.row({ icon: 'check', color: 'var(--teal)', title: 'Синхронизация включена', sub: 'Данные хранятся в вашей учётной записи Claude и видны только вам', wrap: true }) : null,
             ui.row({ icon: 'share', color: 'var(--green)', title: 'Резервная копия', sub: 'Сохранить все данные в файл', onclick: () => ui.backup() }),
             ui.row({ icon: 'refresh', color: 'var(--teal)', title: 'Восстановить из копии', onclick: () => ui.restore(() => { api.close(); }) }),

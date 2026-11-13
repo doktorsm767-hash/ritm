@@ -29,7 +29,7 @@
         i === next ? h('span', { class: 'chip c', style: { '--c': 'var(--orange)' } }, 'следующая') : icon('chevR', 16))),
       tp.note ? h('p', { class: 'caption' }, tp.note) : null
     ];
-    if (s.workouts.length) body.push(h('div', { class: 'section' }, ui.head('История')), h('div', { class: 'list' }, sortDesc(s.workouts, 'date').slice(0, 6).map((x) => ui.row({ icon: 'check', color: 'var(--green)', title: x.title, sub: App.fmtDate(x.date, { weekday: 'short', day: 'numeric', month: 'long' }), val: (x.minutes || 0) + ' мин' }))));
+    if (s.workouts.length) body.push(h('div', { class: 'section' }, ui.head('История')), h('div', { class: 'list' }, sortDesc(s.workouts, 'date').slice(0, 6).map((x) => ui.row({ icon: 'check', color: 'var(--green)', title: x.title, sub: App.fmtDate(x.date, { weekday: 'short', day: 'numeric', month: 'long' }) + (x.hrAvg ? ' · пульс ' + x.hrAvg + ' ср., ' + x.hrMax + ' макс.' : ''), val: (x.minutes || 0) + ' мин' }))));
     return { title: 'Тренировки', body: body };
   }
   App.registerTab({ id: 'train', title: 'Тренировки', short: 'Спорт', icon: 'dumbbell', render: trainTab });
@@ -67,9 +67,13 @@
     const tp = store.state.trainPlan, day = tp.days[idx], started = Date.now();
     const done = day.exercises.map((e) => new Array(e.sets).fill(false));
     let tick = 0, rest = null;
-    const s = sheet({ title: day.title, foot: true, onClose: () => clearInterval(tick), build: (b, api) => {
+    // пульс с часов за тренировку: средний и максимальный
+    const pulse = [];
+    const offHr = App.hr ? App.hr.on((x) => { if (x.live()) pulse.push(x.bpm); }) : null;
+    const s = sheet({ title: day.title, foot: true, onClose: () => { clearInterval(tick); if (offHr) offHr(); }, build: (b, api) => {
       const clock = h('span', { class: 'chip num' }, '0:00');
       api.left.appendChild(clock);
+      const hc = ui.hrChip && ui.hrChip(); if (hc) api.left.appendChild(hc);
       const restBox = h('div'), progress = h('div', { class: 'sub', style: 'text-align:center;margin-bottom:8px' });
       const total = done.reduce((a, x) => a + x.length, 0);
       const count = () => done.reduce((a, x) => a + x.filter(Boolean).length, 0);
@@ -94,7 +98,9 @@
       paint();
       kidsAdd(api.foot, restBox, progress, h('button', { class: 'btn primary block', type: 'button', onclick: async () => {
         if (count() < total && !(await App.confirm({ title: 'Завершить тренировку?', text: 'Выполнены не все подходы. Тренировка всё равно будет засчитана.', ok: 'Завершить' }))) return;
-        store.state.workouts.push({ id: uid(), date: App.dkey(), day: idx, title: day.title, minutes: Math.max(1, Math.round((Date.now() - started) / 60000)) });
+        const rec = { id: uid(), date: App.dkey(), day: idx, title: day.title, minutes: Math.max(1, Math.round((Date.now() - started) / 60000)) };
+        if (pulse.length > 10) { rec.hrAvg = Math.round(pulse.reduce((x, y) => x + y, 0) / pulse.length); rec.hrMax = Math.max.apply(null, pulse); }
+        store.state.workouts.push(rec);
         store.commit(); s.close(); toast('Тренировка засчитана', { icon: 'flame', color: 'var(--orange)' });
       } }, icon('check', 20), 'Завершить тренировку'));
     } });

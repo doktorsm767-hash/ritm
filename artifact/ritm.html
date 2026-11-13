@@ -455,8 +455,10 @@ h1,h2,h3,p{margin:0}
 .coach-svg .cskin{fill:var(--c-skin)}
 .coach-svg .ctop{fill:var(--c-top)}
 .coach-svg .cbot{fill:var(--c-bot)}
-.coach-svg .cshoe{fill:var(--c-shoe);stroke:var(--c-bot);stroke-width:.8}
+.coach-svg .cshoe{fill:var(--c-shoe)}
 .coach-svg .chair{fill:var(--c-hair)}
+.coach-svg .csole{fill:#2C2C2E}
+.coach-svg .ceye{fill:#1C1C1E}
 .coach-svg .chl{fill:var(--accent);opacity:.55;mix-blend-mode:normal}
 .coach-svg .cfar{filter:brightness(.72) saturate(.9)}
 .coach-svg .cfar .chl{opacity:.3}
@@ -468,7 +470,7 @@ h1,h2,h3,p{margin:0}
 .coach-svg .ccab{stroke:var(--fg-3);stroke-width:1.6}
 .coach-svg .cdb{fill:#3A3A3C}
 .coach-svg .cplate{fill:var(--card);stroke:#3A3A3C;stroke-width:4}
-:root{--coach-gear:color-mix(in srgb,var(--fg) 16%,var(--bg));--c-skin:#E3AE8D;--c-top:#3B3F4A;--c-bot:#1F2229;--c-shoe:#F4F4F6;--c-hair:#3A2A22}
+:root{--coach-gear:color-mix(in srgb,var(--fg) 16%,var(--bg));--c-skin:#E3AE8D;--c-top:#3B3F4A;--c-bot:#1F2229;--c-shoe:#D5D9E2;--c-hair:#3A2A22}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--c-top:#5B6170;--c-bot:#3A3F4A;--c-shoe:#E5E5EA;--c-hair:#2A1E18}}
 :root[data-theme="dark"]{--c-top:#5B6170;--c-bot:#3A3F4A;--c-shoe:#E5E5EA;--c-hair:#2A1E18}
 .coach-thumb{width:64px;height:52px;flex:none;border-radius:13px;background:var(--fill);padding:2px;transition:transform .12s ease-out}
@@ -509,6 +511,17 @@ h1,h2,h3,p{margin:0}
 .pc-msg.good{background:color-mix(in srgb,#30D158 75%,transparent)}
 .pc-msg.warn{background:color-mix(in srgb,#FF9F0A 82%,transparent);color:#1C1C1E}
 .pc-msg.bad{background:color-mix(in srgb,#FF453A 80%,transparent)}
+
+/* ---------- пульс с часов ---------- */
+.hr-chip{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px 0 8px;margin-left:6px;border-radius:999px;background:var(--fill);color:var(--fg-2);font-size:14px;font-weight:600}
+.hr-chip.on{color:var(--fg);--z:var(--red)}
+.hr-chip .hr-heart{display:grid;place-items:center;color:var(--fg-3)}
+.hr-chip.on .hr-heart{color:var(--z,var(--red));animation:beat 1s ease-in-out infinite}
+.hr-chip.dark{background:rgba(255,255,255,.16);color:#fff;margin:8px 0 0}
+.hr-big{font:800 64px/1 var(--font-round);transition:color .3s}
+.big-h{color:var(--red);animation:beat 1s ease-in-out infinite}
+@keyframes beat{0%,100%{transform:scale(1)}15%{transform:scale(1.22)}30%{transform:scale(1)}45%{transform:scale(1.12)}}
+@media (prefers-reduced-motion:reduce){.hr-chip.on .hr-heart,.big-h{animation:none}}
 
 </style>
 <div id="app"></div>
@@ -1927,6 +1940,7 @@ window.RITM_CONFIG = {
           h('div', { class: 'list' },
             ui.row({ icon: 'sparkles', color: 'var(--purple)', title: 'ИИ-помощник', sub: m === 'demo' ? 'Не подключён — показываются примеры' : 'Claude подключён', onclick: () => ui.aiSettings(() => draw(b)) })),
           h('div', { class: 'list' },
+            ui.row({ icon: 'heart', color: 'var(--red)', title: 'Часы', sub: App.hr && App.hr.live() ? 'Пульс ' + App.hr.bpm + ' уд/мин' : 'Пульс в реальном времени с Huawei и других часов', onclick: () => ui.watch() }),
             App.sync && App.sync.active() ? ui.row({ icon: 'check', color: 'var(--teal)', title: 'Синхронизация включена', sub: 'Данные хранятся в вашей учётной записи Claude и видны только вам', wrap: true }) : null,
             ui.row({ icon: 'share', color: 'var(--green)', title: 'Резервная копия', sub: 'Сохранить все данные в файл', onclick: () => ui.backup() }),
             ui.row({ icon: 'refresh', color: 'var(--teal)', title: 'Восстановить из копии', onclick: () => ui.restore(() => { api.close(); }) }),
@@ -2639,7 +2653,7 @@ window.RITM_CONFIG = {
     kf.forEach((k) => { for (const n in k.W) { mn = Math.min(mn, k.W[n][0]); mx = Math.max(mx, k.W[n][0]); } });
     const shift = CX - (mn + mx) / 2;
     kf.forEach((k) => { k.rootX += shift; for (const n in k.W) k.W[n][0] += shift; });
-    return (cache[id] = { a, kf, fy, W0: kf[0].W });
+    return (cache[id] = { id, a, kf, fy, W0: kf[0].W });
   }
 
   /* ---------- отрисовка ---------- */
@@ -2650,12 +2664,14 @@ window.RITM_CONFIG = {
 
   // объёмные формы: «капсула» между двумя суставами с разными радиусами
   const f1 = (v) => v.toFixed(1);
-  const circ = (c, r) => 'M' + f1(c[0] - r) + ' ' + f1(c[1]) + 'a' + f1(r) + ' ' + f1(r) + ' 0 1 0 ' + f1(2 * r) + ' 0a' + f1(r) + ' ' + f1(r) + ' 0 1 0 ' + f1(-2 * r) + ' 0Z';
+  // окружность; sw — направление обхода (должно совпадать с контуром, иначе при наложении появляется дыра)
+  const circ = (c, r, sw) => { const f = sw ? '1' : '0'; return 'M' + f1(c[0] - r) + ' ' + f1(c[1]) + 'a' + f1(r) + ' ' + f1(r) + ' 0 1 ' + f + ' ' + f1(2 * r) + ' 0a' + f1(r) + ' ' + f1(r) + ' 0 1 ' + f + ' ' + f1(-2 * r) + ' 0Z'; };
+  const cw = (pts) => { let a = 0; for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; a += p[0] * q[1] - q[0] * p[1]; } return a > 0; };
   function capsule(A, B, rA, rB) {
     let dx = B[0] - A[0], dy = B[1] - A[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
     const nx = -dy, ny = dx;
-    return 'M' + f1(A[0] + nx * rA) + ' ' + f1(A[1] + ny * rA) + 'L' + f1(B[0] + nx * rB) + ' ' + f1(B[1] + ny * rB) +
-      'L' + f1(B[0] - nx * rB) + ' ' + f1(B[1] - ny * rB) + 'L' + f1(A[0] - nx * rA) + ' ' + f1(A[1] - ny * rA) + 'Z' + circ(A, rA) + circ(B, rB);
+    const q = [[A[0] + nx * rA, A[1] + ny * rA], [B[0] + nx * rB, B[1] + ny * rB], [B[0] - nx * rB, B[1] - ny * rB], [A[0] - nx * rA, A[1] - ny * rA]], sw = cw(q);
+    return 'M' + q.map((p) => f1(p[0]) + ' ' + f1(p[1])).join('L') + 'Z' + circ(A, rA, sw) + circ(B, rB, sw);
   }
   // плавный контур по точкам (квадратичные кривые через середины)
   function smooth(pts) {
@@ -2666,6 +2682,26 @@ window.RITM_CONFIG = {
     }
     return d + 'Z';
   }
+  // рельефная конечность: радиусы вдоль кости (5 точек) отдельно для передней и задней стороны
+  function muscle(A, B, pf, pb, front) {
+    let dx = B[0] - A[0], dy = B[1] - A[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+    let nx = -dy, ny = dx;
+    // «перед» конечности — сторона, куда смотрит персонаж (вправо), у горизонтальных — вверх
+    if (front) { pf = pf.map((v, i) => (v + pb[i]) / 2); pb = pf; }
+    else if (nx < -0.25 || (Math.abs(nx) <= 0.25 && ny > 0)) { nx = -nx; ny = -ny; }
+    const pts = [];
+    for (let i = 0; i < 5; i++) { const k = i / 4; pts.push([A[0] + dx * l * k + nx * pf[i], A[1] + dy * l * k + ny * pf[i]]); }
+    for (let i = 4; i >= 0; i--) { const k = i / 4; pts.push([A[0] + dx * l * k - nx * pb[i], A[1] + dy * l * k - ny * pb[i]]); }
+    const sw = cw(pts);
+    return smooth(pts) + circ(A, Math.min(pf[0], pb[0]), sw) + circ(B, Math.min(pf[4], pb[4]), sw);
+  }
+  const PROF = {
+    th: [[7.4, 8.2, 7.4, 6.2, 5.2], [7.2, 6.8, 6.2, 5.5, 5.0]],
+    sh: [[4.9, 4.4, 3.9, 3.4, 3.1], [5.0, 6.1, 5.2, 3.9, 3.2]],
+    ua: [[5.2, 5.0, 5.3, 4.4, 3.8], [5.2, 4.9, 4.6, 4.1, 3.7]],
+    fa: [[3.8, 4.2, 3.7, 3.0, 2.6], [3.8, 3.7, 3.3, 2.9, 2.6]]
+  };
+
   // корпус: таз, талия, грудь, плечи; спереди грудь выпуклее, сзади — ягодицы
   function torsoPath(hip, sh, front, breath) {
     let ux = sh[0] - hip[0], uy = sh[1] - hip[1]; const l = Math.hypot(ux, uy) || 1; ux /= l; uy /= l;
@@ -2686,6 +2722,16 @@ window.RITM_CONFIG = {
     const rg = el('radialGradient', { id: uidg + 's' }, defs);
     el('stop', { offset: '0', 'stop-color': 'currentColor', 'stop-opacity': '.22' }, rg);
     el('stop', { offset: '1', 'stop-color': 'currentColor', 'stop-opacity': '0' }, rg);
+    // светотень: свет сверху-слева, у каждого материала свой градиент
+    const MAT = { skin: '--c-skin', top: '--c-top', bot: '--c-bot', shoe: '--c-shoe', hair: '--c-hair' };
+    const fillOf = {};
+    Object.keys(MAT).forEach((m) => {
+      const g = el('linearGradient', { id: uidg + m, x1: '0', y1: '0', x2: '1', y2: '1' }, defs);
+      el('stop', { offset: '0', style: 'stop-color:color-mix(in srgb,var(' + MAT[m] + ') 72%,#fff)' }, g);
+      el('stop', { offset: '.5', style: 'stop-color:var(' + MAT[m] + ')' }, g);
+      el('stop', { offset: '1', style: 'stop-color:color-mix(in srgb,var(' + MAT[m] + ') 74%,#000)' }, g);
+      fillOf[m] = 'url(#' + uidg + m + ')';
+    });
     const back = el('g', { class: 'cp' }, svg);
     const props = new Set(a.props || []);
     if (fy < FLOOR) el('line', { x1: 0, x2: 240, y1: FLOOR + 1, y2: FLOOR + 1, class: 'cfl' }, back);
@@ -2700,8 +2746,8 @@ window.RITM_CONFIG = {
     if (props.has('pad')) pad('sh', 'hip', 11, true);
     if (props.has('padlegs')) pad('sh', 'kn', 11, true);
     if (props.has('padhyper')) pad('hip', 'kn', 10, true);
-    if (props.has('seat')) { pad('sh', 'hip', 11, false); const h0 = W0.hip; el('rect', { x: h0[0] - 22, y: h0[1] + 8, width: 36, height: Math.max(0, FLOOR - h0[1] - 8), rx: 5, class: 'cbox' }, back); }
-    if (props.has('box')) { const h0 = W0.hip; el('rect', { x: h0[0] - 18, y: h0[1] + 8, width: 30, height: Math.max(0, FLOOR - h0[1] - 8), rx: 5, class: 'cbox' }, back); }
+    if (props.has('seat')) { pad('sh', 'hip', 11, false); const h0 = W0.hip; el('rect', { x: h0[0] - 22, y: h0[1] + 8, width: 36, height: FLOOR - h0[1] - 8, rx: 5, class: 'cbox' }, back); }
+    if (props.has('box')) { const h0 = W0.hip; el('rect', { x: h0[0] - 18, y: h0[1] + 8, width: 30, height: FLOOR - h0[1] - 8, rx: 5, class: 'cbox' }, back); }
     if (props.has('chair')) { const hd = W0.ha; el('rect', { x: hd[0] - 30, y: hd[1] + 3, width: 36, height: 6, rx: 3, class: 'cbox' }, back); line(el('line', { class: 'cleg' }, back), [hd[0] - 26, hd[1] + 9], [hd[0] - 26, FLOOR]); line(el('line', { class: 'cleg' }, back), [hd[0] + 2, hd[1] + 9], [hd[0] + 2, FLOOR]); }
     let cable = null, cableFrom = null, plate = null;
     if (props.has('cable_top')) cableFrom = [W0.ha[0] + 16, 14];
@@ -2712,16 +2758,17 @@ window.RITM_CONFIG = {
     const barback = props.has('barback') ? el('circle', { r: 10, class: 'cplate' }, back) : null;
 
     // тело: дальние конечности (в тени), корпус и голова, ближние конечности; поверх — подсветка работающих мышц
-    const path = (cls, parent) => el('path', { class: cls }, parent);
+    const MATCLS = { cskin: 'skin', ctop: 'top', cbot: 'bot', cshoe: 'shoe', chair: 'hair' };
+    const path = (cls, parent) => { const p = el('path', { class: cls }, parent); if (MATCLS[cls]) p.setAttribute('fill', fillOf[MATCLS[cls]]); return p; };
     const farG = el('g', { class: front ? 'cfar0' : 'cfar' }, svg);
-    const mk = (g, hl) => ({ th: path('cbot', g), sh: path('cbot', g), ft: path('cshoe', g), ua: path('ctop', g), fa: path('cskin', g), hand: path('cskin', g),
+    const mk = (g, hl) => ({ th: path('cbot', g), sh: path('cbot', g), ft: path('cshoe', g), sole: path('csole', g), fa: path('cskin', g), ua: path('ctop', g), delt: path('ctop', g), hand: path('cskin', g),
       hlth: hl && F.has('TH') ? path('chl', g) : null, hlsh: hl && F.has('SH') ? path('chl', g) : null, hlua: hl && F.has('UA') ? path('chl', g) : null, hlfa: hl && F.has('FA') ? path('chl', g) : null });
     const far = mk(farG, front);
     const neck = path('cskin', svg);
     const torso = path('ctop', svg);
     const shorts = path('cbot', svg);
     const hlT = F.has('T') ? path('chl', svg) : null;
-    const hair = path('chair', svg), face = path('cskin', svg), nose = path('cskin', svg);
+    const hair = path('chair', svg), face = path('cskin', svg), nose = path('cskin', svg), ear = path('cskin', svg), eye = path('ceye', svg), brow = path('chair', svg);
     const nearG = el('g', {}, svg);
     const near = mk(nearG, true);
     const fr = el('g', { class: 'cp' }, svg);
@@ -2730,14 +2777,19 @@ window.RITM_CONFIG = {
     const bar = props.has('bar') ? el('circle', { r: 12, class: 'cplate' }, fr) : null;
 
     const limb = (S, hip, sh, kn, an, to, el_, ha, Ln) => {
-      const thP = capsule(hip, kn, front ? 6.6 : 7.2, 5), shP = capsule(kn, an, 4.9, 3.3);
+      const thP = muscle(hip, kn, PROF.th[0], PROF.th[1], front), shP = muscle(kn, an, PROF.sh[0], PROF.sh[1], front);
       S.th.setAttribute('d', thP); S.sh.setAttribute('d', shP);
       // стопа: от пятки к носку
       let dx = to[0] - an[0], dy = to[1] - an[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
       const heel = [an[0] - dx * 3, an[1] - dy * 3];
-      S.ft.setAttribute('d', capsule(heel, to, 3.6, 2.6));
-      const uaP = capsule(sh, el_, 4.8, 3.7), faP = capsule(el_, ha, 3.6, 2.7);
-      S.ua.setAttribute('d', uaP); S.fa.setAttribute('d', faP); S.hand.setAttribute('d', circ(ha, 3.3));
+      S.ft.setAttribute('d', capsule(heel, to, 3.7, 2.7));
+      // подошва — тонкая тёмная полоса снизу стопы
+      const sn = front ? [0, 1] : (dx < 0 ? [dy, -dx] : [-dy, dx]);
+      const snn = sn[1] < 0 ? [-sn[0], -sn[1]] : sn;
+      S.sole.setAttribute('d', capsule([heel[0] + snn[0] * 2.6, heel[1] + snn[1] * 2.6], [to[0] + snn[0] * 1.8, to[1] + snn[1] * 1.8], 1.3, 1.1));
+      const uaP = muscle(sh, el_, PROF.ua[0], PROF.ua[1], front), faP = muscle(el_, ha, PROF.fa[0], PROF.fa[1], front);
+      S.ua.setAttribute('d', uaP); S.fa.setAttribute('d', faP); S.hand.setAttribute('d', circ(ha, 3.4));
+      S.delt.setAttribute('d', circ(sh, front ? 5.8 : 6.2));
       if (S.hlth) S.hlth.setAttribute('d', thP); if (S.hlsh) S.hlsh.setAttribute('d', shP);
       if (S.hlua) S.hlua.setAttribute('d', uaP); if (S.hlfa) S.hlfa.setAttribute('d', faP);
     };
@@ -2761,6 +2813,10 @@ window.RITM_CONFIG = {
       hair.setAttribute('d', circ([hc[0] - fx * 1.6 + ux * 1.1, hc[1] - fy2 * 1.6 + uy * 1.1], 10));
       face.setAttribute('d', circ([hc[0] + fx * 1.2 - ux * 0.6, hc[1] + fy2 * 1.2 - uy * 0.6], 9));
       nose.setAttribute('d', front ? '' : circ([hc[0] + fx * 9.4 - ux * 0.5, hc[1] + fy2 * 9.4 - uy * 0.5], 1.9));
+      ear.setAttribute('d', front ? circ([hc[0] - 9.2, hc[1]], 2.2) + circ([hc[0] + 9.2, hc[1]], 2.2) : circ([hc[0] - fx * 1.4 - ux * 0.4, hc[1] - fy2 * 1.4 - uy * 0.4], 2.4));
+      eye.setAttribute('d', front ? circ([hc[0] - 3.4, hc[1] - 0.6], 1.1) + circ([hc[0] + 3.4, hc[1] - 0.6], 1.1) : circ([hc[0] + fx * 5.6 + ux * 1.4, hc[1] + fy2 * 5.6 + uy * 1.4], 1.1));
+      brow.setAttribute('d', front ? capsule([hc[0] - 5, hc[1] - 3.4], [hc[0] - 2, hc[1] - 3.8], 0.7, 0.7) + capsule([hc[0] + 2, hc[1] - 3.8], [hc[0] + 5, hc[1] - 3.4], 0.7, 0.7)
+        : capsule([hc[0] + fx * 4.2 + ux * 3.4, hc[1] + fy2 * 4.2 + uy * 3.4], [hc[0] + fx * 7 + ux * 3.2, hc[1] + fy2 * 7 + uy * 3.2], 0.7, 0.6));
       // тень под телом
       const xs = [W.an[0], W.an2[0], W.to[0], W.to2[0], W.hip[0], W.sh[0]];
       const mnx = Math.min.apply(null, xs), mxx = Math.max.apply(null, xs);
@@ -2777,9 +2833,14 @@ window.RITM_CONFIG = {
 
   // поза в момент времени: удержание, плавный переход; руки и голова чуть запаздывают — как у живого человека
   const LAG = { ua: 0.08, fa: 0.12, ua2: 0.08, fa2: 0.12, H: 0.05 };
+  const CONC_FIRST = { bridge: 1, superman: 1, curl: 1, lateral: 1, shoulder_press: 1, pushdown: 1, leg_curl: 1, hyper: 1, calf: 1, crunch: 1, leg_press: 1, pulldown: 1, seated_row: 1, bent_row: 1, incline: 1 };
   function sample(st, time, speed) {
     const a = st.a, n = st.kf.length, segDur = (a.dur || 2.2) / (speed || 1);
-    const tt = (time / segDur) % n, i = Math.floor(tt), loc = tt - i, j = (i + 1) % n, HOLD = 0.22;
+    // темп: уступающая фаза (опускание) медленнее преодолевающей (подъёма)
+    const wts = n === 2 ? (CONC_FIRST[st.id] ? [0.8, 1.25] : [1.25, 0.8]) : new Array(n).fill(1);
+    const total = wts.reduce((x, y) => x + y, 0), cyc = (time / segDur) % total;
+    let i = 0, acc = 0; while (i < n - 1 && cyc >= acc + wts[i]) { acc += wts[i]; i++; }
+    const loc = (cyc - acc) / wts[i], j = (i + 1) % n, HOLD = 0.22;
     const kAt = (lag) => { const x = (loc - HOLD - lag) / (1 - HOLD - lag); return x <= 0 ? 0 : x >= 1 ? 1 : ease(x); };
     const k = kAt(0);
     const A = st.kf[i], B = st.kf[j], P = {};
@@ -2824,6 +2885,117 @@ window.RITM_CONFIG = {
   // неподвижный кадр ключевой позы (для просмотра и проверки)
   const still = (svg, id, i) => { const st = prep(id), k = st.kf[i || 0]; build(svg, id)(k.p, k.rootX, k.p.lift); };
   App.coach = { ANIMS, CUES, find, mount, svgNode, prep, still };
+})();
+
+/* Ритм — пульс с часов в реальном времени.
+   Часы Huawei (и любые другие с «трансляцией пульса») отдают пульс по стандартному Bluetooth-профилю Heart Rate.
+   Подключение через Web Bluetooth: работает в Chrome на Android, на сайте и в приложении, установленном из Chrome. */
+(function () {
+  'use strict';
+  const App = window.App, { h, icon, sheet, toast, haptic, kidsSet, kidsAdd, store } = App, ui = App.ui;
+  const KEY = 'ritm.hr.device';
+
+  const hr = {
+    bpm: null, at: 0, device: null, name: '', status: 'off', subs: new Set(),
+    available: () => !(window.claude && window.claude.use) && !!(navigator.bluetooth && navigator.bluetooth.requestDevice) && window.isSecureContext,
+    live: () => hr.status === 'on' && Date.now() - hr.at < 6000,
+    on(f) { hr.subs.add(f); return () => hr.subs.delete(f); },
+    emit() { hr.subs.forEach((f) => { try { f(hr); } catch (e) {} }); }
+  };
+  // разбор пакета Heart Rate Measurement: бит 0 флагов — 16-битное значение
+  const parse = (dv) => (dv.getUint8(0) & 1 ? dv.getUint16(1, true) : dv.getUint8(1));
+
+  async function attach(device) {
+    hr.device = device; hr.name = device.name || 'Часы'; hr.status = 'connecting'; hr.emit();
+    try { localStorage.setItem(KEY, hr.name); } catch (e) {}
+    device.addEventListener('gattserverdisconnected', onDrop);
+    const server = await device.gatt.connect();
+    const svc = await server.getPrimaryService('heart_rate');
+    const ch = await svc.getCharacteristic('heart_rate_measurement');
+    ch.addEventListener('characteristicvaluechanged', (e) => {
+      const v = parse(e.target.value);
+      if (v > 25 && v < 240) { hr.bpm = v; hr.at = Date.now(); hr.status = 'on'; hr.emit(); }
+    });
+    await ch.startNotifications();
+    hr.status = 'on'; hr.emit();
+  }
+  let retry = 0;
+  function onDrop() {
+    if (hr.status === 'off') return;
+    hr.status = 'reconnecting'; hr.emit();
+    // часы могут ненадолго пропадать — пробуем переподключиться несколько раз
+    if (retry++ < 5) setTimeout(() => { if (hr.device && hr.status !== 'off') attach(hr.device).then(() => { retry = 0; }).catch(onDrop); }, 1500 * retry);
+    else { hr.status = 'lost'; hr.emit(); }
+  }
+  hr.connect = async function () {
+    const device = await navigator.bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }] });
+    retry = 0;
+    await attach(device);
+  };
+  hr.disconnect = function () {
+    hr.status = 'off'; hr.bpm = null; hr.emit();
+    try { if (hr.device && hr.device.gatt.connected) hr.device.gatt.disconnect(); } catch (e) {}
+    hr.device = null;
+  };
+  // зоны пульса от максимального (220 − возраст)
+  hr.zone = (bpm) => {
+    const p = store.state.profile, max = 220 - (p ? App.calc.age(p) : 30), k = bpm / max;
+    return k < 0.6 ? { n: 1, t: 'Разминка', c: 'var(--blue)' } : k < 0.7 ? { n: 2, t: 'Жиросжигание', c: 'var(--green)' }
+      : k < 0.8 ? { n: 3, t: 'Аэробная', c: 'var(--yellow)' } : k < 0.9 ? { n: 4, t: 'Анаэробная', c: 'var(--orange)' } : { n: 5, t: 'Максимум', c: 'var(--red)' };
+  };
+
+  // значок пульса для экранов тренировки и камеры: обновляется сам
+  ui.hrChip = (dark) => {
+    const val = h('b', { class: 'num' }, '—');
+    const el = h('button', { class: 'hr-chip' + (dark ? ' dark' : ''), type: 'button', 'aria-label': 'Пульс с часов', onclick: () => ui.watch() }, h('span', { class: 'hr-heart' }, icon('heart', 15)), val);
+    let seen = false;
+    const paint = () => {
+      if (el.isConnected) seen = true; else if (seen) { off(); return; }
+      const on = hr.live();
+      el.classList.toggle('on', on);
+      val.textContent = on ? String(hr.bpm) : hr.status === 'reconnecting' || hr.status === 'connecting' ? '…' : 'Часы';
+      if (on) { const z = hr.zone(hr.bpm); el.style.setProperty('--z', z.c); el.querySelector('.hr-heart').style.animationDuration = (60 / hr.bpm).toFixed(2) + 's'; }
+    };
+    const off = hr.on(paint);
+    setTimeout(paint, 0);
+    return hr.available() ? el : null;
+  };
+
+  // экран «Часы»: подключение и живой пульс
+  ui.watch = function () {
+    sheet({ title: 'Часы', build: (b) => {
+      const big = h('div', { class: 'hr-big num' }, '—'), zone = h('div', { class: 'sub' }), state = h('div');
+      const draw = () => {
+        if (!b.isConnected) { off(); return; }
+        const on = hr.live();
+        big.textContent = on ? hr.bpm : '—';
+        const z = on ? hr.zone(hr.bpm) : null;
+        zone.textContent = z ? 'Зона ' + z.n + ' · ' + z.t : hr.status === 'connecting' ? 'Подключаю…' : hr.status === 'reconnecting' ? 'Связь прервалась, переподключаю…' : hr.status === 'lost' ? 'Часы не отвечают' : 'Не подключены';
+        big.style.color = z ? z.c : 'var(--fg-3)';
+        kidsSet(state, hr.status === 'off' || hr.status === 'lost'
+          ? h('button', { class: 'btn primary block', type: 'button', onclick: async () => {
+              try { await hr.connect(); haptic(12); toast('Часы подключены: ' + hr.name, { icon: 'heart', color: 'var(--red)' }); }
+              catch (e) { if (e && e.name !== 'NotFoundError') toast('Не удалось подключиться. Включите трансляцию пульса на часах.', { icon: 'info', color: 'var(--orange)' }); hr.status = 'off'; hr.emit(); }
+            } }, icon('heart', 20), 'Подключить часы')
+          : h('button', { class: 'btn gray block', type: 'button', onclick: () => hr.disconnect() }, 'Отключить ' + (hr.name || 'часы')));
+      };
+      const off = hr.on(draw);
+      kidsAdd(b, h('div', { class: 'stack' },
+        h('div', { class: 'card', style: 'display:flex;flex-direction:column;align-items:center;gap:4px;padding:22px' }, h('span', { class: 'hr-heart big-h' }, icon('heart', 34)), big, h('div', { class: 'sub' }, 'уд/мин'), zone),
+        state,
+        hr.available() ? null : h('div', { class: 'note', style: { '--c': 'var(--orange)' } }, h('b', { class: 'h' }, icon('info', 15), 'Здесь подключение недоступно'),
+          'Пульс с часов работает в Chrome на Android: откройте сайт приложения в Chrome или установите его оттуда через «Добавить на главный экран».'),
+        h('div', null, h('div', { class: 'caption', style: 'margin-bottom:8px' }, 'Как подключить Huawei Watch Fit 3'),
+          h('div', { class: 'card' }, h('ol', { class: 'coach-steps' },
+            h('li', null, 'На часах откройте список приложений → Настройки → «Трансляция пульса» (HR Data Broadcasts) и включите её.'),
+            h('li', null, 'На телефоне включите Bluetooth и геолокацию — без неё Android не ищет устройства.'),
+            h('li', null, 'Нажмите «Подключить часы» и выберите свои часы в списке.')))),
+        h('p', { class: 'caption' }, 'Пока идёт трансляция, часы могут отключиться от приложения Huawei Health — после тренировки выключите трансляцию, и синхронизация вернётся. Если пункта «Трансляция пульса» нет, эта модель её не поддерживает.')));
+      draw();
+    } });
+  };
+
+  App.hr = hr;
 })();
 
 /* Ритм — проверка техники камерой.
@@ -2985,7 +3157,7 @@ window.RITM_CONFIG = {
       const flipBtn = h('button', { class: 'pc-btn', type: 'button', 'aria-label': 'Сменить камеру', onclick: () => { facing = facing === 'user' ? 'environment' : 'user'; start(); } }, icon('refresh', 18));
       const closeBtn = h('button', { class: 'pc-btn', type: 'button', 'aria-label': 'Закрыть', onclick: () => s.close() }, icon('xmark', 16));
       const stage = h('div', { class: 'pc-stage' }, video, cv,
-        h('div', { class: 'pc-top' }, h('div', { class: 'pc-count' }, reps, repsLbl), h('div', { class: 'pc-tools' }, voiceBtn, flipBtn, closeBtn)),
+        h('div', { class: 'pc-top' }, h('div', { class: 'pc-count' }, reps, repsLbl, ui.hrChip ? ui.hrChip(true) : null), h('div', { class: 'pc-tools' }, voiceBtn, flipBtn, closeBtn)),
         h('div', { class: 'pc-mini' }, mini),
         h('div', { class: 'pc-bottom' }, h('div', { class: 'pc-name' }, e.name), msg));
       kidsAdd(b, stage);
@@ -3095,7 +3267,7 @@ window.RITM_CONFIG = {
         i === next ? h('span', { class: 'chip c', style: { '--c': 'var(--orange)' } }, 'следующая') : icon('chevR', 16))),
       tp.note ? h('p', { class: 'caption' }, tp.note) : null
     ];
-    if (s.workouts.length) body.push(h('div', { class: 'section' }, ui.head('История')), h('div', { class: 'list' }, sortDesc(s.workouts, 'date').slice(0, 6).map((x) => ui.row({ icon: 'check', color: 'var(--green)', title: x.title, sub: App.fmtDate(x.date, { weekday: 'short', day: 'numeric', month: 'long' }), val: (x.minutes || 0) + ' мин' }))));
+    if (s.workouts.length) body.push(h('div', { class: 'section' }, ui.head('История')), h('div', { class: 'list' }, sortDesc(s.workouts, 'date').slice(0, 6).map((x) => ui.row({ icon: 'check', color: 'var(--green)', title: x.title, sub: App.fmtDate(x.date, { weekday: 'short', day: 'numeric', month: 'long' }) + (x.hrAvg ? ' · пульс ' + x.hrAvg + ' ср., ' + x.hrMax + ' макс.' : ''), val: (x.minutes || 0) + ' мин' }))));
     return { title: 'Тренировки', body: body };
   }
   App.registerTab({ id: 'train', title: 'Тренировки', short: 'Спорт', icon: 'dumbbell', render: trainTab });
@@ -3133,9 +3305,13 @@ window.RITM_CONFIG = {
     const tp = store.state.trainPlan, day = tp.days[idx], started = Date.now();
     const done = day.exercises.map((e) => new Array(e.sets).fill(false));
     let tick = 0, rest = null;
-    const s = sheet({ title: day.title, foot: true, onClose: () => clearInterval(tick), build: (b, api) => {
+    // пульс с часов за тренировку: средний и максимальный
+    const pulse = [];
+    const offHr = App.hr ? App.hr.on((x) => { if (x.live()) pulse.push(x.bpm); }) : null;
+    const s = sheet({ title: day.title, foot: true, onClose: () => { clearInterval(tick); if (offHr) offHr(); }, build: (b, api) => {
       const clock = h('span', { class: 'chip num' }, '0:00');
       api.left.appendChild(clock);
+      const hc = ui.hrChip && ui.hrChip(); if (hc) api.left.appendChild(hc);
       const restBox = h('div'), progress = h('div', { class: 'sub', style: 'text-align:center;margin-bottom:8px' });
       const total = done.reduce((a, x) => a + x.length, 0);
       const count = () => done.reduce((a, x) => a + x.filter(Boolean).length, 0);
@@ -3160,7 +3336,9 @@ window.RITM_CONFIG = {
       paint();
       kidsAdd(api.foot, restBox, progress, h('button', { class: 'btn primary block', type: 'button', onclick: async () => {
         if (count() < total && !(await App.confirm({ title: 'Завершить тренировку?', text: 'Выполнены не все подходы. Тренировка всё равно будет засчитана.', ok: 'Завершить' }))) return;
-        store.state.workouts.push({ id: uid(), date: App.dkey(), day: idx, title: day.title, minutes: Math.max(1, Math.round((Date.now() - started) / 60000)) });
+        const rec = { id: uid(), date: App.dkey(), day: idx, title: day.title, minutes: Math.max(1, Math.round((Date.now() - started) / 60000)) };
+        if (pulse.length > 10) { rec.hrAvg = Math.round(pulse.reduce((x, y) => x + y, 0) / pulse.length); rec.hrMax = Math.max.apply(null, pulse); }
+        store.state.workouts.push(rec);
         store.commit(); s.close(); toast('Тренировка засчитана', { icon: 'flame', color: 'var(--orange)' });
       } }, icon('check', 20), 'Завершить тренировку'));
     } });

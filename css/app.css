@@ -409,8 +409,10 @@ h1,h2,h3,p{margin:0}
 .coach-svg .cskin{fill:var(--c-skin)}
 .coach-svg .ctop{fill:var(--c-top)}
 .coach-svg .cbot{fill:var(--c-bot)}
-.coach-svg .cshoe{fill:var(--c-shoe);stroke:var(--c-bot);stroke-width:.8}
+.coach-svg .cshoe{fill:var(--c-shoe)}
 .coach-svg .chair{fill:var(--c-hair)}
+.coach-svg .csole{fill:#2C2C2E}
+.coach-svg .ceye{fill:#1C1C1E}
 .coach-svg .chl{fill:var(--accent);opacity:.55;mix-blend-mode:normal}
 .coach-svg .cfar{filter:brightness(.72) saturate(.9)}
 .coach-svg .cfar .chl{opacity:.3}
@@ -422,7 +424,7 @@ h1,h2,h3,p{margin:0}
 .coach-svg .ccab{stroke:var(--fg-3);stroke-width:1.6}
 .coach-svg .cdb{fill:#3A3A3C}
 .coach-svg .cplate{fill:var(--card);stroke:#3A3A3C;stroke-width:4}
-:root{--coach-gear:color-mix(in srgb,var(--fg) 16%,var(--bg));--c-skin:#E3AE8D;--c-top:#3B3F4A;--c-bot:#1F2229;--c-shoe:#F4F4F6;--c-hair:#3A2A22}
+:root{--coach-gear:color-mix(in srgb,var(--fg) 16%,var(--bg));--c-skin:#E3AE8D;--c-top:#3B3F4A;--c-bot:#1F2229;--c-shoe:#D5D9E2;--c-hair:#3A2A22}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--c-top:#5B6170;--c-bot:#3A3F4A;--c-shoe:#E5E5EA;--c-hair:#2A1E18}}
 :root[data-theme="dark"]{--c-top:#5B6170;--c-bot:#3A3F4A;--c-shoe:#E5E5EA;--c-hair:#2A1E18}
 .coach-thumb{width:64px;height:52px;flex:none;border-radius:13px;background:var(--fill);padding:2px;transition:transform .12s ease-out}
@@ -463,3 +465,14 @@ h1,h2,h3,p{margin:0}
 .pc-msg.good{background:color-mix(in srgb,#30D158 75%,transparent)}
 .pc-msg.warn{background:color-mix(in srgb,#FF9F0A 82%,transparent);color:#1C1C1E}
 .pc-msg.bad{background:color-mix(in srgb,#FF453A 80%,transparent)}
+
+/* ---------- пульс с часов ---------- */
+.hr-chip{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px 0 8px;margin-left:6px;border-radius:999px;background:var(--fill);color:var(--fg-2);font-size:14px;font-weight:600}
+.hr-chip.on{color:var(--fg);--z:var(--red)}
+.hr-chip .hr-heart{display:grid;place-items:center;color:var(--fg-3)}
+.hr-chip.on .hr-heart{color:var(--z,var(--red));animation:beat 1s ease-in-out infinite}
+.hr-chip.dark{background:rgba(255,255,255,.16);color:#fff;margin:8px 0 0}
+.hr-big{font:800 64px/1 var(--font-round);transition:color .3s}
+.big-h{color:var(--red);animation:beat 1s ease-in-out infinite}
+@keyframes beat{0%,100%{transform:scale(1)}15%{transform:scale(1.22)}30%{transform:scale(1)}45%{transform:scale(1.12)}}
+@media (prefers-reduced-motion:reduce){.hr-chip.on .hr-heart,.big-h{animation:none}}

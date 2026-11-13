@@ -157,7 +157,7 @@
       const flipBtn = h('button', { class: 'pc-btn', type: 'button', 'aria-label': 'Сменить камеру', onclick: () => { facing = facing === 'user' ? 'environment' : 'user'; start(); } }, icon('refresh', 18));
       const closeBtn = h('button', { class: 'pc-btn', type: 'button', 'aria-label': 'Закрыть', onclick: () => s.close() }, icon('xmark', 16));
       const stage = h('div', { class: 'pc-stage' }, video, cv,
-        h('div', { class: 'pc-top' }, h('div', { class: 'pc-count' }, reps, repsLbl), h('div', { class: 'pc-tools' }, voiceBtn, flipBtn, closeBtn)),
+        h('div', { class: 'pc-top' }, h('div', { class: 'pc-count' }, reps, repsLbl, ui.hrChip ? ui.hrChip(true) : null), h('div', { class: 'pc-tools' }, voiceBtn, flipBtn, closeBtn)),
         h('div', { class: 'pc-mini' }, mini),
         h('div', { class: 'pc-bottom' }, h('div', { class: 'pc-name' }, e.name), msg));
       kidsAdd(b, stage);
