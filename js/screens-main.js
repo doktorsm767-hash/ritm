@@ -27,15 +27,74 @@
         h('button', { class: 'btn sm tinted', type: 'button', style: '--accent:var(--orange)', onclick: () => ui.aiSettings() }, 'Подробнее'))) : null;
   };
   // выбор фото: с камеры или из галереи
+  // своя камера внутри приложения (getUserMedia) — системное окно выбора файла на части телефонов камеру не открывает
+  const liveCam = () => !(window.claude && window.claude.use) && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) && window.isSecureContext;
+  // невидимое поле выбора файла внутри <label>: нажатие пользователя открывает системный выбор без программного click()
+  const fileLabel = (o, cap, content, cls) => {
+    const inp = h('input', { type: 'file', accept: o.accept || 'image/jpeg,image/png,image/webp', class: 'vh' });
+    if (cap) inp.setAttribute('capture', 'environment');
+    if (o.multiple) inp.multiple = true;
+    inp.addEventListener('change', () => { const f = Array.from(inp.files || []); inp.value = ''; if (f.length) { if (o.beforeFiles) o.beforeFiles(); o.onFiles(f); } });
+    return h('label', { class: cls || 'row tap has-icon' }, inp, content);
+  };
+  ui.camera = (o) => {
+    let stream = null, done = false;
+    const shots = [];
+    const stop = () => { if (stream) stream.getTracks().forEach((t) => t.stop()); stream = null; };
+    const s = sheet({ title: o.title || 'Камера', detent: 'full', bare: true, onClose: () => { stop(); if (!done && o.onCancel) o.onCancel(); }, build: (b) => {
+      b.style.padding = '0';
+      const video = h('video', { class: 'pc-video', autoplay: true, muted: true, playsinline: true }); video.setAttribute('playsinline', ''); video.muted = true;
+      const msg = h('div', { class: 'pc-msg' }, 'Запускаю камеру…');
+      const thumbs = h('div', { class: 'cam-thumbs' });
+      const doneBtn = h('button', { class: 'cam-done', type: 'button', hidden: true, onclick: () => finish() }, 'Готово');
+      const shutter = h('button', { class: 'cam-shutter', type: 'button', 'aria-label': 'Сделать снимок', disabled: true, onclick: () => snap() });
+      const finish = () => { if (!shots.length) return; done = true; stop(); s.close(); setTimeout(() => o.onFiles(shots.slice()), 120); };
+      const native = fileLabel(Object.assign({}, o, { beforeFiles: () => { done = true; stop(); s.close(); } }), true, h('span', null, 'Открыть камеру телефона'), 'cam-native');
+      kidsAdd(b, h('div', { class: 'pc-stage' }, video,
+        h('div', { class: 'pc-top' }, h('div', { class: 'pc-count' }, h('div', { style: 'font-weight:700;font-size:17px' }, o.title || 'Камера'), o.tip ? h('div', { class: 'pc-reps-l' }, o.tip) : null),
+          h('div', { class: 'pc-tools' }, h('button', { class: 'pc-btn', type: 'button', 'aria-label': 'Закрыть', onclick: () => s.close() }, icon('xmark', 16)))),
+        h('div', { class: 'cam-bottom' }, h('div', { class: 'cam-msgline' }, msg), h('div', { class: 'cam-bar' }, thumbs, shutter, doneBtn), native)));
+      const setMsg = (t, kind) => { msg.textContent = t; msg.className = 'pc-msg ' + (kind || ''); msg.hidden = !t; };
+      function snap() {
+        if (!video.videoWidth) return;
+        const k = Math.min(1, 1600 / Math.max(video.videoWidth, video.videoHeight));
+        const cv = document.createElement('canvas'); cv.width = Math.round(video.videoWidth * k); cv.height = Math.round(video.videoHeight * k);
+        cv.getContext('2d').drawImage(video, 0, 0, cv.width, cv.height);
+        haptic(12); video.classList.add('cam-flash'); setTimeout(() => video.classList.remove('cam-flash'), 180);
+        cv.toBlob((bl) => {
+          if (!bl) return;
+          shots.push(new File([bl], 'photo-' + Date.now() + '.jpg', { type: 'image/jpeg' }));
+          if (!o.multiple) return finish();
+          thumbs.appendChild(h('img', { src: URL.createObjectURL(bl), alt: '' }));
+          doneBtn.hidden = false; doneBtn.textContent = 'Готово · ' + shots.length;
+          setMsg(shots.length === 1 ? 'Можно снять ещё — например, дверцу или ящики' : '', '');
+        }, 'image/jpeg', 0.85);
+      }
+      (async () => {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1440 } }, audio: false });
+          if (done) return stop();
+          video.srcObject = stream; await video.play().catch(() => {});
+          shutter.disabled = false; setMsg(o.multiple ? 'Наведите и нажмите на кнопку' : 'Наведите и нажмите на кнопку', '');
+        } catch (er) {
+          setMsg('Камера не запустилась — нет разрешения. Разрешите доступ к камере или откройте камеру телефона кнопкой ниже.', 'bad');
+          native.classList.add('big');
+        }
+      })();
+    } });
+  };
   ui.pickPhoto = (o) => {
-    // choose: сначала спросить — камера или галерея (на Android без capture показывается только галерея)
+    // choose: сначала спросить — камера или галерея
     if (o.choose) {
-      const next = (cap) => { s.close(); setTimeout(() => ui.pickPhoto(Object.assign({}, o, { choose: false, capture: cap })), 160); };
-      const s = sheet({ title: o.title || 'Фото', detent: 'auto', build: (b) => kidsAdd(b, h('div', { class: 'list' },
-        ui.row({ icon: 'camera', color: 'var(--pink)', title: 'Сфотографировать', sub: 'Откроется камера', onclick: () => next(true) }),
-        ui.row({ icon: 'photo', color: 'var(--blue)', title: 'Выбрать из галереи', sub: o.multiple ? 'Можно несколько фото' : 'Готовое фото', onclick: () => next(false) }))) });
+      const close = () => s.close();
+      const camRow = liveCam()
+        ? ui.row({ icon: 'camera', color: 'var(--pink)', title: 'Сфотографировать', sub: 'Откроется камера', onclick: () => { s.close(); setTimeout(() => ui.camera(o), 160); } })
+        : fileLabel(Object.assign({}, o, { beforeFiles: close }), true, [h('span', { class: 'ico', style: { '--c': 'var(--pink)' } }, icon('camera', 18)), h('div', { class: 'row-main' }, h('div', { class: 'row-title' }, 'Сфотографировать'), h('div', { class: 'row-sub' }, 'Откроется камера'))]);
+      const galRow = fileLabel(Object.assign({}, o, { beforeFiles: close }), false, [h('span', { class: 'ico', style: { '--c': 'var(--blue)' } }, icon('photo', 18)), h('div', { class: 'row-main' }, h('div', { class: 'row-title' }, 'Выбрать из галереи'), h('div', { class: 'row-sub' }, o.multiple ? 'Можно несколько фото' : 'Готовое фото'))]);
+      const s = sheet({ title: o.title || 'Фото', detent: 'auto', build: (b) => kidsAdd(b, h('div', { class: 'list' }, camRow, galRow)) });
       return;
     }
+    if (o.capture && liveCam()) return ui.camera(o);
     const inp = h('input', { type: 'file', accept: o.accept || 'image/jpeg,image/png,image/webp', hidden: true, id: 'pick-' + App.uid() });
     if (o.capture) inp.setAttribute('capture', 'environment');
     if (o.multiple) inp.multiple = true;
