@@ -255,14 +255,44 @@
   function fridgePhoto() {
     ui.pickPhoto({ choose: true, title: 'Фото холодильника', multiple: true, onFiles: (files) => {
       const s = sheet({ title: 'Продукты на фото', build: (b) => runAI(b, 'Смотрю, что есть в холодильнике…', () => App.ai.fridgePhoto(files), (d, demo) => {
-        const items = (d.items || []).filter((x) => x && x.name).map((x) => ({ name: String(x.name), qty: String(x.qty || ''), cat: CATS.indexOf(x.cat) >= 0 ? x.cat : 'Другое', on: true }));
-        if (!items.length) return kidsSet(b, errorView('На фото не удалось распознать продукты. Попробуйте снять ближе и при хорошем свете.'));
-        const list = h('div', { class: 'list' });
-        const draw = () => kidsSet(list, ...items.map((x) => h('button', { class: 'row tap', type: 'button', onclick: () => { x.on = !x.on; haptic(6); draw(); } },
-          h('span', { class: 'set' + (x.on ? ' on' : ''), style: 'flex:none' }, x.on ? icon('check', 15) : null), h('div', { class: 'row-main' }, h('div', { class: 'row-title' }, x.name), h('div', { class: 'row-sub' }, x.cat)), h('div', { class: 'row-val' }, x.qty))));
-        draw();
-        kidsSet(b, h('div', { class: 'stack fade' }, demo ? ui.demoBadge() : null, h('p', { class: 'caption' }, 'Снимите галочки с того, что распознано неверно.'), list, demo ? ui.aiNote() : null,
-          h('button', { class: 'btn primary block', type: 'button', onclick: () => { items.filter((x) => x.on).forEach((x) => store.state.fridge.push({ id: uid(), name: x.name, qty: x.qty, cat: x.cat })); segId = 'fridge'; store.commit(); s.close(); App.go('food', { keep: true }); toast('Продукты добавлены', { icon: 'fridge', color: 'var(--orange)' }); } }, 'Добавить в холодильник')));
+        const norm = (arr) => (arr || []).filter((x) => x && x.name).map((x) => ({ name: String(x.name), qty: String(x.qty || ''), cat: CATS.indexOf(x.cat) >= 0 ? x.cat : 'Другое', on: true, fresh: false }));
+        const normU = (arr) => (arr || []).filter((x) => x && x.what).map((x) => ({ what: String(x.what), why: String(x.why || ''), hint: String(x.hint || ''), busy: false }));
+        const items = norm(d.items), unclear = normU(d.unclear);
+        const wrap = h('div', { class: 'stack fade' });
+        // переснять одно непонятное место: крупный снимок → ИИ → добавить к списку
+        const reshoot = (u) => ui.pickPhoto({ capture: true, onFiles: async (f) => {
+          u.busy = true; u.err = ''; draw();
+          try {
+            const r = await App.ai.fridgePhoto(f, { clarify: u, known: items.map((x) => x.name) });
+            const got = norm(r.data && r.data.items), still = normU(r.data && r.data.unclear);
+            got.forEach((x) => { x.fresh = true; if (!items.some((y) => y.name.toLowerCase() === x.name.toLowerCase())) items.push(x); });
+            unclear.splice(unclear.indexOf(u), 1, ...still);
+            haptic(10); if (got.length) toast('Распознано: ' + got.map((x) => x.name).join(', '), { icon: 'check', color: 'var(--green)' });
+            if (!got.length && !still.length) toast('На снимке ничего не нашлось');
+          } catch (e) { u.busy = false; u.err = e.user || 'Не получилось. Попробуйте ещё раз.'; }
+          draw();
+        } });
+        const draw = () => {
+          if (!items.length && !unclear.length) return kidsSet(wrap, errorView('На фото не удалось распознать продукты. Попробуйте снять ближе и при хорошем свете.', () => { s.close(); setTimeout(fridgePhoto, 150); }));
+          const list = items.length ? h('div', { class: 'list' }, items.map((x) => h('button', { class: 'row tap' + (x.fresh ? ' fade' : ''), type: 'button', onclick: () => { x.on = !x.on; haptic(6); draw(); } },
+            h('span', { class: 'set' + (x.on ? ' on' : ''), style: 'flex:none' }, x.on ? icon('check', 15) : null), h('div', { class: 'row-main' }, h('div', { class: 'row-title' }, x.name), h('div', { class: 'row-sub' }, x.cat)), h('div', { class: 'row-val' }, x.qty)))) : null;
+          const ask = unclear.length ? h('div', { class: 'stack' },
+            h('div', { class: 'section-head' }, h('h2', null, 'Не разобрал — переснимите')),
+            h('p', { class: 'caption' }, 'Снимите крупно только это место — я добавлю продукты к списку.'),
+            h('div', { class: 'list' }, unclear.map((u) => h('div', { class: 'row has-icon', style: 'align-items:flex-start' },
+              h('span', { class: 'ico soft', style: { '--c': 'var(--orange)' } }, icon('info', 18)),
+              h('div', { class: 'row-main' }, h('div', { class: 'row-title wrap' }, u.what),
+                h('div', { class: 'row-sub wrap' }, [u.why, u.hint].filter(Boolean).join('. ')),
+                u.err ? h('div', { class: 'row-sub wrap', style: 'color:var(--red)' }, u.err) : null,
+                h('div', { class: 'btn-row', style: 'margin-top:8px' },
+                  h('button', { class: 'btn sm tinted', type: 'button', disabled: u.busy, style: '--accent:var(--orange)', onclick: () => reshoot(u) }, icon('camera', 16), u.busy ? 'Разбираю…' : 'Переснять'),
+                  h('button', { class: 'btn sm gray', type: 'button', disabled: u.busy, onclick: () => { unclear.splice(unclear.indexOf(u), 1); draw(); } }, 'Пропустить'))))))) : null;
+          const n = items.filter((x) => x.on).length;
+          kidsSet(wrap, demo ? ui.demoBadge() : null, items.length ? h('p', { class: 'caption' }, 'Снимите галочки с того, что распознано неверно.') : null, list, ask, demo ? ui.aiNote() : null,
+            h('button', { class: 'btn primary block', type: 'button', disabled: !n, onclick: () => { items.filter((x) => x.on).forEach((x) => store.state.fridge.push({ id: uid(), name: x.name, qty: x.qty, cat: x.cat })); segId = 'fridge'; store.commit(); s.close(); App.go('food', { keep: true }); toast('Продукты добавлены', { icon: 'fridge', color: 'var(--orange)' }); } },
+              unclear.length && n ? 'Добавить ' + n + ' без непонятного' : 'Добавить в холодильник'));
+        };
+        draw(); kidsSet(b, wrap);
       }) });
     } });
   }
