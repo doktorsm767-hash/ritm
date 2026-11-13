@@ -451,24 +451,26 @@ h1,h2,h3,p{margin:0}
 }
 
 /* ---------- тренер ---------- */
-.coach-svg{display:block;width:100%;height:100%;overflow:visible}
-.coach-svg .cs{stroke:var(--coach-body);stroke-linecap:round;fill:none}
-.coach-svg .cs.fc{stroke:url(#none) var(--accent);stroke:var(--accent)}
-.coach-svg .cs.far{opacity:.38}
-.coach-svg .tor{stroke-width:15}.coach-svg .tor.tf{stroke-width:24}
-.coach-svg .th{stroke-width:12}.coach-svg .shn{stroke-width:10}.coach-svg .ft{stroke-width:7}
-.coach-svg .ua{stroke-width:9}.coach-svg .fa{stroke-width:8}
-.coach-svg .chead{fill:var(--coach-body)}
+.coach-svg{display:block;width:100%;height:100%;overflow:visible;color:var(--fg)}
+.coach-svg .cskin{fill:var(--c-skin)}
+.coach-svg .ctop{fill:var(--c-top)}
+.coach-svg .cbot{fill:var(--c-bot)}
+.coach-svg .cshoe{fill:var(--c-shoe);stroke:var(--c-bot);stroke-width:.8}
+.coach-svg .chair{fill:var(--c-hair)}
+.coach-svg .chl{fill:var(--accent);opacity:.55;mix-blend-mode:normal}
+.coach-svg .cfar{filter:brightness(.72) saturate(.9)}
+.coach-svg .cfar .chl{opacity:.3}
 .coach-svg .cfl{stroke:var(--sep);stroke-width:1.5}
-.coach-svg .csh{fill:var(--fg);opacity:.08}
 .coach-svg .cpad{stroke:var(--coach-gear);stroke-width:7;stroke-linecap:round}
 .coach-svg .cleg{stroke:var(--coach-gear);stroke-width:3.5;stroke-linecap:round}
 .coach-svg .cbox{fill:var(--coach-gear)}
 .coach-svg .cpul{fill:var(--card);stroke:var(--coach-gear);stroke-width:2.5}
 .coach-svg .ccab{stroke:var(--fg-3);stroke-width:1.6}
-.coach-svg .cdb{fill:var(--fg);opacity:.82}
-.coach-svg .cplate{fill:var(--card);stroke:var(--fg);stroke-width:4;opacity:.9}
-:root{--coach-body:color-mix(in srgb,var(--fg) 78%,var(--bg));--coach-gear:color-mix(in srgb,var(--fg) 16%,var(--bg))}
+.coach-svg .cdb{fill:#3A3A3C}
+.coach-svg .cplate{fill:var(--card);stroke:#3A3A3C;stroke-width:4}
+:root{--coach-gear:color-mix(in srgb,var(--fg) 16%,var(--bg));--c-skin:#E3AE8D;--c-top:#3B3F4A;--c-bot:#1F2229;--c-shoe:#F4F4F6;--c-hair:#3A2A22}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--c-top:#5B6170;--c-bot:#3A3F4A;--c-shoe:#E5E5EA;--c-hair:#2A1E18}}
+:root[data-theme="dark"]{--c-top:#5B6170;--c-bot:#3A3F4A;--c-shoe:#E5E5EA;--c-hair:#2A1E18}
 .coach-thumb{width:64px;height:52px;flex:none;border-radius:13px;background:var(--fill);padding:2px;transition:transform .12s ease-out}
 .coach-thumb:active{transform:scale(.92)}
 .coach-stage{position:relative;aspect-ratio:240/190;width:100%;max-width:100%;border-radius:24px;overflow:hidden;
@@ -483,6 +485,30 @@ h1,h2,h3,p{margin:0}
 .coach-steps li{display:flex;gap:12px;align-items:flex-start;font-size:15px;line-height:1.4;counter-increment:st}
 .coach-steps li::before{content:counter(st);flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;
   background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent);font:700 13px var(--font-round)}
+
+/* ---------- проверка техники камерой ---------- */
+.pc-stage{position:relative;height:100%;min-height:100%;background:#000;overflow:hidden;color:#fff}
+.pc-video,.pc-canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pc-video.mirror,.pc-canvas.mirror{transform:scaleX(-1)}
+.pc-top{position:absolute;left:0;right:0;top:0;display:flex;justify-content:space-between;align-items:flex-start;
+  padding:calc(12px + env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px)) 0 max(14px,env(safe-area-inset-left,0px))}
+.pc-count{padding:8px 16px 10px;border-radius:20px;background:rgba(0,0,0,.42);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
+.pc-reps{font:800 46px/1 var(--font-round)}
+.pc-reps.pop{animation:pop .45s cubic-bezier(.2,.9,.3,1.35)}
+.pc-reps-l{font-size:12px;opacity:.8;margin-top:2px}
+.pc-tools{display:flex;gap:8px}
+.pc-btn{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:#fff;background:rgba(0,0,0,.42);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
+.pc-btn.off{opacity:.45}
+.pc-mini{position:absolute;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(120px + env(safe-area-inset-bottom,0px));width:120px;height:96px;
+  border-radius:18px;background:rgba(255,255,255,.88);padding:4px}
+.pc-bottom{position:absolute;left:0;right:0;bottom:0;padding:16px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  background:linear-gradient(transparent,rgba(0,0,0,.7))}
+.pc-name{font-size:13px;opacity:.75;margin-bottom:6px}
+.pc-msg{display:inline-block;padding:10px 16px;border-radius:16px;font-size:17px;font-weight:600;line-height:1.3;background:rgba(0,0,0,.5);
+  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);transition:background .25s}
+.pc-msg.good{background:color-mix(in srgb,#30D158 75%,transparent)}
+.pc-msg.warn{background:color-mix(in srgb,#FF9F0A 82%,transparent);color:#1C1C1E}
+.pc-msg.bad{background:color-mix(in srgb,#FF453A 80%,transparent)}
 
 </style>
 <div id="app"></div>
@@ -2622,76 +2648,142 @@ window.RITM_CONFIG = {
   const line = (e, a, b) => { e.setAttribute('x1', a[0].toFixed(1)); e.setAttribute('y1', a[1].toFixed(1)); e.setAttribute('x2', b[0].toFixed(1)); e.setAttribute('y2', b[1].toFixed(1)); };
   const perp = (a, b) => { let dx = b[0] - a[0], dy = b[1] - a[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l; let n = [-dy, dx]; if (n[1] < 0 || (n[1] === 0 && n[0] < 0)) n = [dy, -dx]; return n; };
 
+  // объёмные формы: «капсула» между двумя суставами с разными радиусами
+  const f1 = (v) => v.toFixed(1);
+  const circ = (c, r) => 'M' + f1(c[0] - r) + ' ' + f1(c[1]) + 'a' + f1(r) + ' ' + f1(r) + ' 0 1 0 ' + f1(2 * r) + ' 0a' + f1(r) + ' ' + f1(r) + ' 0 1 0 ' + f1(-2 * r) + ' 0Z';
+  function capsule(A, B, rA, rB) {
+    let dx = B[0] - A[0], dy = B[1] - A[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+    const nx = -dy, ny = dx;
+    return 'M' + f1(A[0] + nx * rA) + ' ' + f1(A[1] + ny * rA) + 'L' + f1(B[0] + nx * rB) + ' ' + f1(B[1] + ny * rB) +
+      'L' + f1(B[0] - nx * rB) + ' ' + f1(B[1] - ny * rB) + 'L' + f1(A[0] - nx * rA) + ' ' + f1(A[1] - ny * rA) + 'Z' + circ(A, rA) + circ(B, rB);
+  }
+  // плавный контур по точкам (квадратичные кривые через середины)
+  function smooth(pts) {
+    let d = 'M' + f1((pts[0][0] + pts[1][0]) / 2) + ' ' + f1((pts[0][1] + pts[1][1]) / 2);
+    for (let i = 1; i <= pts.length; i++) {
+      const p = pts[i % pts.length], q = pts[(i + 1) % pts.length];
+      d += 'Q' + f1(p[0]) + ' ' + f1(p[1]) + ' ' + f1((p[0] + q[0]) / 2) + ' ' + f1((p[1] + q[1]) / 2);
+    }
+    return d + 'Z';
+  }
+  // корпус: таз, талия, грудь, плечи; спереди грудь выпуклее, сзади — ягодицы
+  function torsoPath(hip, sh, front, breath) {
+    let ux = sh[0] - hip[0], uy = sh[1] - hip[1]; const l = Math.hypot(ux, uy) || 1; ux /= l; uy /= l;
+    const fx = -uy, fy = ux;   // «вперёд» — в сторону груди
+    const W = front ? [[0, 11, 11], [0.42, 9.2, 9.2], [0.74, 12.6 * breath, 12.6 * breath], [1, 13.5, 13.5]]
+      : [[-0.06, 7.5, 9.6], [0.4, 6.4, 6.6], [0.74, 9.6 * breath, 7.2], [1, 6.8, 7]];
+    const at = (k, side, w) => [hip[0] + ux * l * k + fx * w * side, hip[1] + uy * l * k + fy * w * side];
+    const pts = W.map((r) => at(r[0], 1, r[1])).concat(W.slice().reverse().map((r) => at(r[0], -1, r[2])));
+    return smooth(pts);
+  }
+
   function build(svg, id) {
     const st = prep(id), a = st.a, F = new Set(a.focus || []), front = !!a.front, W0 = st.W0, fy = st.fy;
     svg.setAttribute('viewBox', '0 0 240 190');
     svg.classList.add('coach-svg');
+    const uidg = 'cg' + Math.random().toString(36).slice(2, 8);
+    const defs = el('defs', {}, svg);
+    const rg = el('radialGradient', { id: uidg + 's' }, defs);
+    el('stop', { offset: '0', 'stop-color': 'currentColor', 'stop-opacity': '.22' }, rg);
+    el('stop', { offset: '1', 'stop-color': 'currentColor', 'stop-opacity': '0' }, rg);
     const back = el('g', { class: 'cp' }, svg);
-    // неподвижный инвентарь — по первой позе
     const props = new Set(a.props || []);
     if (fy < FLOOR) el('line', { x1: 0, x2: 240, y1: FLOOR + 1, y2: FLOOR + 1, class: 'cfl' }, back);
     el('line', { x1: 0, x2: 240, y1: fy + 1, y2: fy + 1, class: 'cfl' }, back);
-    const shadow = el('ellipse', { cx: 120, cy: FLOOR + 2, rx: 40, ry: 3.5, class: 'csh' }, back);
+    const shadow = el('ellipse', { cx: 120, cy: FLOOR + 1.5, rx: 40, ry: 5, fill: 'url(#' + uidg + 's)', class: 'csh2' }, back);
     const pad = (from, to, off, stand) => {
       const A = W0[from], B = W0[to], n = perp(A, B);
       const a1 = [A[0] + n[0] * off, A[1] + n[1] * off], b1 = [B[0] + n[0] * off, B[1] + n[1] * off];
       line(el('line', { class: 'cpad' }, back), a1, b1);
       if (stand) { const m = [(a1[0] + b1[0]) / 2, (a1[1] + b1[1]) / 2]; line(el('line', { class: 'cleg' }, back), [m[0], m[1] + 3], [m[0], FLOOR]); }
     };
-    if (props.has('pad')) pad('sh', 'hip', 10, true);
-    if (props.has('padlegs')) pad('sh', 'kn', 10, true);
-    if (props.has('padhyper')) { pad('hip', 'kn', 10, true); }
-    if (props.has('seat')) { pad('sh', 'hip', 10, false); const h0 = W0.hip; el('rect', { x: h0[0] - 22, y: h0[1] + 7, width: 36, height: FLOOR - h0[1] - 7, rx: 5, class: 'cbox' }, back); }
-    if (props.has('box')) { const h0 = W0.hip; el('rect', { x: h0[0] - 18, y: h0[1] + 7, width: 30, height: FLOOR - h0[1] - 7, rx: 5, class: 'cbox' }, back); }
+    if (props.has('pad')) pad('sh', 'hip', 11, true);
+    if (props.has('padlegs')) pad('sh', 'kn', 11, true);
+    if (props.has('padhyper')) pad('hip', 'kn', 10, true);
+    if (props.has('seat')) { pad('sh', 'hip', 11, false); const h0 = W0.hip; el('rect', { x: h0[0] - 22, y: h0[1] + 8, width: 36, height: Math.max(0, FLOOR - h0[1] - 8), rx: 5, class: 'cbox' }, back); }
+    if (props.has('box')) { const h0 = W0.hip; el('rect', { x: h0[0] - 18, y: h0[1] + 8, width: 30, height: Math.max(0, FLOOR - h0[1] - 8), rx: 5, class: 'cbox' }, back); }
     if (props.has('chair')) { const hd = W0.ha; el('rect', { x: hd[0] - 30, y: hd[1] + 3, width: 36, height: 6, rx: 3, class: 'cbox' }, back); line(el('line', { class: 'cleg' }, back), [hd[0] - 26, hd[1] + 9], [hd[0] - 26, FLOOR]); line(el('line', { class: 'cleg' }, back), [hd[0] + 2, hd[1] + 9], [hd[0] + 2, FLOOR]); }
     let cable = null, cableFrom = null, plate = null;
-    if (props.has('cable_top')) { cableFrom = [W0.ha[0] + 16, 14]; }
-    if (props.has('cable_up')) { cableFrom = [W0.ha[0], 6]; }
+    if (props.has('cable_top')) cableFrom = [W0.ha[0] + 16, 14];
+    if (props.has('cable_up')) cableFrom = [W0.ha[0], 6];
     if (props.has('cable_front')) { cableFrom = [W0.to[0] + 22, W0.ha[1]]; el('rect', { x: cableFrom[0], y: cableFrom[1] - 30, width: 8, height: FLOOR - cableFrom[1] + 30, rx: 3, class: 'cbox' }, back); }
     if (cableFrom) { if (!props.has('cable_front')) el('rect', { x: cableFrom[0] - 4, y: 0, width: 8, height: cableFrom[1], class: 'cbox' }, back); el('circle', { cx: cableFrom[0], cy: cableFrom[1], r: 4, class: 'cpul' }, back); cable = el('line', { class: 'ccab' }, back); }
     if (props.has('platform')) plate = el('line', { class: 'cpad' }, back);
-
-    // тело: дальние конечности, корпус, голова, ближние конечности
-    const seg = (cls, key, far) => el('line', { class: 'cs ' + cls + (F.has(key) ? ' fc' : '') + (far ? ' far' : '') }, svg);
-    const far = { th: seg('th', 'TH', true), sh: seg('shn', 'SH', true), ft: seg('ft', 'SH', true), ua: seg('ua', 'UA', true), fa: seg('fa', 'FA', true) };
-    const torso = seg(front ? 'tor tf' : 'tor', 'T');
-    const head = el('circle', { r: L.HR, class: 'chead' }, svg);
-    const near = { th: seg('th', 'TH'), sh: seg('shn', 'SH'), ft: seg('ft', 'SH'), ua: seg('ua', 'UA'), fa: seg('fa', 'FA') };
-    if (front) { far.ua.classList.remove('far'); far.fa.classList.remove('far'); far.th.classList.remove('far'); far.sh.classList.remove('far'); far.ft.classList.remove('far'); }
-    const fr = el('g', { class: 'cp' }, svg);
-    const db1 = props.has('db') ? el('rect', { width: 16, height: 7, rx: 3, class: 'cdb' }, fr) : null;
-    const db2 = props.has('db') && !front ? null : props.has('db') ? el('rect', { width: 16, height: 7, rx: 3, class: 'cdb' }, fr) : null;
-    const bar = props.has('bar') ? el('circle', { r: 12, class: 'cplate' }, fr) : null;
     const barback = props.has('barback') ? el('circle', { r: 10, class: 'cplate' }, back) : null;
 
-    return function draw(P, rootX, lift) {
+    // тело: дальние конечности (в тени), корпус и голова, ближние конечности; поверх — подсветка работающих мышц
+    const path = (cls, parent) => el('path', { class: cls }, parent);
+    const farG = el('g', { class: front ? 'cfar0' : 'cfar' }, svg);
+    const mk = (g, hl) => ({ th: path('cbot', g), sh: path('cbot', g), ft: path('cshoe', g), ua: path('ctop', g), fa: path('cskin', g), hand: path('cskin', g),
+      hlth: hl && F.has('TH') ? path('chl', g) : null, hlsh: hl && F.has('SH') ? path('chl', g) : null, hlua: hl && F.has('UA') ? path('chl', g) : null, hlfa: hl && F.has('FA') ? path('chl', g) : null });
+    const far = mk(farG, front);
+    const neck = path('cskin', svg);
+    const torso = path('ctop', svg);
+    const shorts = path('cbot', svg);
+    const hlT = F.has('T') ? path('chl', svg) : null;
+    const hair = path('chair', svg), face = path('cskin', svg), nose = path('cskin', svg);
+    const nearG = el('g', {}, svg);
+    const near = mk(nearG, true);
+    const fr = el('g', { class: 'cp' }, svg);
+    const db1 = props.has('db') ? el('rect', { width: 16, height: 7, rx: 3, class: 'cdb' }, fr) : null;
+    const db2 = props.has('db') && front ? el('rect', { width: 16, height: 7, rx: 3, class: 'cdb' }, fr) : null;
+    const bar = props.has('bar') ? el('circle', { r: 12, class: 'cplate' }, fr) : null;
+
+    const limb = (S, hip, sh, kn, an, to, el_, ha, Ln) => {
+      const thP = capsule(hip, kn, front ? 6.6 : 7.2, 5), shP = capsule(kn, an, 4.9, 3.3);
+      S.th.setAttribute('d', thP); S.sh.setAttribute('d', shP);
+      // стопа: от пятки к носку
+      let dx = to[0] - an[0], dy = to[1] - an[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+      const heel = [an[0] - dx * 3, an[1] - dy * 3];
+      S.ft.setAttribute('d', capsule(heel, to, 3.6, 2.6));
+      const uaP = capsule(sh, el_, 4.8, 3.7), faP = capsule(el_, ha, 3.6, 2.7);
+      S.ua.setAttribute('d', uaP); S.fa.setAttribute('d', faP); S.hand.setAttribute('d', circ(ha, 3.3));
+      if (S.hlth) S.hlth.setAttribute('d', thP); if (S.hlsh) S.hlsh.setAttribute('d', shP);
+      if (S.hlua) S.hlua.setAttribute('d', uaP); if (S.hlfa) S.hlfa.setAttribute('d', faP);
+    };
+
+    return function draw(P, rootX, lift, t) {
       const J = fk(P, front), dy = fy - lowest(J) + (lift || 0);
-      const w = (k) => [J[k][0] + rootX, J[k][1] + dy];
-      const W = {}; for (const k in J) W[k] = w(k);
-      line(far.th, W.hp2, W.kn2); line(far.sh, W.kn2, W.an2); line(far.ft, W.an2, W.to2); line(far.ua, W.sh2, W.el2); line(far.fa, W.el2, W.ha2);
-      line(torso, W.hip, W.sh);
-      head.setAttribute('cx', W.head[0].toFixed(1)); head.setAttribute('cy', W.head[1].toFixed(1));
-      line(near.th, W.hp1, W.kn); line(near.sh, W.kn, W.an); line(near.ft, W.an, W.to); line(near.ua, W.sh1, W.el); line(near.fa, W.el, W.ha);
-      const xs = [W.an[0], W.an2[0], W.to[0], W.to2[0], W.hip[0]];
+      const W = {}; for (const k in J) W[k] = [J[k][0] + rootX, J[k][1] + dy];
+      const breath = 1 + 0.035 * Math.sin((t || 0) * 2 * Math.PI / 3.4);
+      limb(far, W.hp2, W.sh2, W.kn2, W.an2, W.to2, W.el2, W.ha2);
+      limb(near, W.hp1, W.sh1, W.kn, W.an, W.to, W.el, W.ha);
+      torso.setAttribute('d', torsoPath(W.hip, W.sh, front, breath));
+      if (hlT) hlT.setAttribute('d', torsoPath(W.hip, W.sh, front, breath));
+      // шорты/пояс: нижняя часть корпуса
+      const sx = W.sh[0] - W.hip[0], sy = W.sh[1] - W.hip[1];
+      shorts.setAttribute('d', torsoPath(W.hip, [W.hip[0] + sx * 0.3, W.hip[1] + sy * 0.3], front, 1).replace(/Z$/, 'Z'));
+      // шея и голова: волосы на затылке, лицо и нос смотрят вперёд
+      let ux = W.head[0] - W.sh[0], uy = W.head[1] - W.sh[1]; const ul = Math.hypot(ux, uy) || 1; ux /= ul; uy /= ul;
+      const fx = front ? 0 : -uy, fy2 = front ? 0 : ux;
+      neck.setAttribute('d', capsule(W.sh, [W.sh[0] + ux * 9, W.sh[1] + uy * 9], 3.8, 3.6));
+      const hc = W.head;
+      hair.setAttribute('d', circ([hc[0] - fx * 1.6 + ux * 1.1, hc[1] - fy2 * 1.6 + uy * 1.1], 10));
+      face.setAttribute('d', circ([hc[0] + fx * 1.2 - ux * 0.6, hc[1] + fy2 * 1.2 - uy * 0.6], 9));
+      nose.setAttribute('d', front ? '' : circ([hc[0] + fx * 9.4 - ux * 0.5, hc[1] + fy2 * 9.4 - uy * 0.5], 1.9));
+      // тень под телом
+      const xs = [W.an[0], W.an2[0], W.to[0], W.to2[0], W.hip[0], W.sh[0]];
       const mnx = Math.min.apply(null, xs), mxx = Math.max.apply(null, xs);
-      shadow.setAttribute('cx', ((mnx + mxx) / 2).toFixed(1)); shadow.setAttribute('rx', Math.max(18, (mxx - mnx) / 2 + 14).toFixed(1));
-      shadow.setAttribute('opacity', Math.max(0.25, 1 + (lift || 0) / 30).toFixed(2));
+      shadow.setAttribute('cx', f1((mnx + mxx) / 2)); shadow.setAttribute('rx', f1(Math.max(20, (mxx - mnx) / 2 + 16)));
+      shadow.setAttribute('opacity', Math.max(0.3, 1 + (lift || 0) / 25).toFixed(2));
       if (cable) line(cable, cableFrom, W.ha);
       if (plate) { const n = perp(W.kn, W.an), c = [W.to[0] + 3, W.to[1]]; line(plate, [c[0] - n[0] * 22, c[1] - n[1] * 22], [c[0] + n[0] * 22, c[1] + n[1] * 22]); }
-      if (db1) { db1.setAttribute('x', (W.ha[0] - 8).toFixed(1)); db1.setAttribute('y', (W.ha[1] - 3.5).toFixed(1)); }
-      if (db2) { db2.setAttribute('x', (W.ha2[0] - 8).toFixed(1)); db2.setAttribute('y', (W.ha2[1] - 3.5).toFixed(1)); }
-      if (bar) { bar.setAttribute('cx', W.ha[0].toFixed(1)); bar.setAttribute('cy', W.ha[1].toFixed(1)); }
-      if (barback) { const d = [W.sh[0] - W.hip[0], W.sh[1] - W.hip[1]], l = Math.hypot(d[0], d[1]) || 1; barback.setAttribute('cx', (W.sh[0] - d[0] / l * 4 - 3).toFixed(1)); barback.setAttribute('cy', (W.sh[1] - d[1] / l * 4).toFixed(1)); }
+      if (db1) { db1.setAttribute('x', f1(W.ha[0] - 8)); db1.setAttribute('y', f1(W.ha[1] - 3.5)); }
+      if (db2) { db2.setAttribute('x', f1(W.ha2[0] - 8)); db2.setAttribute('y', f1(W.ha2[1] - 3.5)); }
+      if (bar) { bar.setAttribute('cx', f1(W.ha[0])); bar.setAttribute('cy', f1(W.ha[1])); }
+      if (barback) { const l2 = Math.hypot(sx, sy) || 1; barback.setAttribute('cx', f1(W.sh[0] - sx / l2 * 4 - 3)); barback.setAttribute('cy', f1(W.sh[1] - sy / l2 * 4)); }
     };
   }
 
-  // поза в момент времени: удержание в начале каждого отрезка, затем плавный переход
+  // поза в момент времени: удержание, плавный переход; руки и голова чуть запаздывают — как у живого человека
+  const LAG = { ua: 0.08, fa: 0.12, ua2: 0.08, fa2: 0.12, H: 0.05 };
   function sample(st, time, speed) {
     const a = st.a, n = st.kf.length, segDur = (a.dur || 2.2) / (speed || 1);
-    const tt = (time / segDur) % n, i = Math.floor(tt), loc = tt - i, j = (i + 1) % n, HOLD = 0.24;
-    const k = loc < HOLD ? 0 : ease((loc - HOLD) / (1 - HOLD));
+    const tt = (time / segDur) % n, i = Math.floor(tt), loc = tt - i, j = (i + 1) % n, HOLD = 0.22;
+    const kAt = (lag) => { const x = (loc - HOLD - lag) / (1 - HOLD - lag); return x <= 0 ? 0 : x >= 1 ? 1 : ease(x); };
+    const k = kAt(0);
     const A = st.kf[i], B = st.kf[j], P = {};
-    DEF.forEach((key) => { P[key] = key === 'lift' ? A.p.lift + (B.p.lift - A.p.lift) * k : lerpA(A.p[key], B.p[key], k); });
+    DEF.forEach((key) => { const kk = LAG[key] ? kAt(LAG[key]) : k; P[key] = key === 'lift' ? A.p.lift + (B.p.lift - A.p.lift) * k : lerpA(A.p[key], B.p[key], kk); });
     return { P, rootX: A.rootX + (B.rootX - A.rootX) * k, lift: P.lift, phase: k > 0.5 ? j : i };
   }
 
@@ -2708,7 +2800,7 @@ window.RITM_CONFIG = {
       let s;
       if (reduce()) { const st = prep(f.id), n = st.kf.length, i = Math.floor(t / 1.8) % n; s = { P: st.kf[i].p, rootX: st.kf[i].rootX, lift: 0, phase: i }; }
       else s = sample(prep(f.id), t, f.speed);
-      f.draw(s.P, s.rootX, s.lift);
+      f.draw(s.P, s.rootX, s.lift, t);
       if (f.onPhase && s.phase !== f.ph) { f.ph = s.phase; f.onPhase(s.phase); }
     });
     if (live.size && document.visibilityState !== 'hidden') raf = requestAnimationFrame(loop);
@@ -2732,6 +2824,244 @@ window.RITM_CONFIG = {
   // неподвижный кадр ключевой позы (для просмотра и проверки)
   const still = (svg, id, i) => { const st = prep(id), k = st.kf[i || 0]; build(svg, id)(k.p, k.rootX, k.p.lift); };
   App.coach = { ANIMS, CUES, find, mount, svgNode, prep, still };
+})();
+
+/* Ритм — проверка техники камерой.
+   Поза распознаётся прямо на телефоне (MediaPipe Pose Landmarker, файлы лежат в vendor/mediapipe):
+   видео никуда не отправляется. По суставам считаются углы, повторы и типичные ошибки,
+   подсказки показываются на экране и произносятся голосом. */
+(function () {
+  'use strict';
+  const App = window.App, { h, icon, sheet, toast, haptic, kidsSet, kidsAdd } = App, ui = App.ui;
+
+  const available = () => !(window.claude && window.claude.use) && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) && window.isSecureContext;
+
+  /* ---------- геометрия ---------- */
+  const IDX = { nose: 0, sh: [11, 12], el: [13, 14], wr: [15, 16], hip: [23, 24], kn: [25, 26], an: [27, 28], ft: [31, 32] };
+  const ang = (a, b, c) => {   // угол abc в градусах
+    const v1 = [a.x - b.x, a.y - b.y], v2 = [c.x - b.x, c.y - b.y];
+    const d = Math.hypot(v1[0], v1[1]) * Math.hypot(v2[0], v2[1]) || 1;
+    return Math.acos(Math.max(-1, Math.min(1, (v1[0] * v2[0] + v1[1] * v2[1]) / d))) * 180 / Math.PI;
+  };
+  const fromVert = (a, b) => Math.atan2(Math.abs(b.x - a.x), Math.abs(b.y - a.y)) * 180 / Math.PI;   // наклон отрезка от вертикали
+  function frame(lm, W, H) {
+    const P = lm.map((p) => ({ x: p.x * W, y: p.y * H, v: p.visibility == null ? 1 : p.visibility }));
+    const vis = (s) => ['sh', 'hip', 'kn', 'an'].reduce((a, k) => a + P[IDX[k][s]].v, 0);
+    const s = vis(0) >= vis(1) ? 0 : 1;   // сторона, лучше видная камере
+    const j = (k, side) => P[IDX[k][side == null ? s : side]];
+    const both = (k) => P[IDX[k][0]].v > 0.6 && P[IDX[k][1]].v > 0.6;
+    return { P, j, both, s };
+  }
+  // линия тела: где таз относительно прямой плечо—лодыжка (+ ниже линии, − выше)
+  const hipOff = (F) => { const a = F.j('sh'), b = F.j('an'), m = F.j('hip'); const k = (m.x - a.x) / ((b.x - a.x) || 1); return m.y - (a.y + (b.y - a.y) * k); };
+
+  /* ---------- правила по упражнениям ----------
+     metric — главный угол; повтор: опускание ниже down и возврат выше up (или наоборот при inv);
+     rep(min,max,F) — проверка после повтора; live(F,m) — проверка в каждом кадре; need — какие суставы должны быть видны. */
+  const knee = (F) => ang(F.j('hip'), F.j('kn'), F.j('an'));
+  const elbow = (F) => ang(F.j('sh'), F.j('el'), F.j('wr'));
+  const line = (F) => ang(F.j('sh'), F.j('hip'), F.j('an'));
+  const lean = (F) => fromVert(F.j('hip'), F.j('sh'));
+  const bodyLine = (F) => { if (line(F) > 160) return null; return hipOff(F) > 0 ? 'Не провисайте в пояснице — подтяните живот' : 'Опустите таз — тело в одну линию'; };
+  const RULES = {
+    squat: { view: 'Встаньте боком к камере, всё тело в кадре', need: ['hip', 'kn', 'an', 'sh'], metric: knee, down: 120, up: 160,
+      rep: (mn) => (mn > 105 ? 'Присядьте глубже — бёдра до параллели с полом' : null),
+      live: (F, m) => {
+        if (m < 135 && lean(F) > 52) return 'Грудь выше — не заваливайтесь вперёд';
+        if (m < 140 && F.both('kn') && F.both('an')) { const kd = Math.abs(F.P[25].x - F.P[26].x), ad = Math.abs(F.P[27].x - F.P[28].x); if (ad > 20 && kd < ad * 0.75) return 'Колени наружу — по линии носков'; }
+        return null;
+      } },
+    lunge: { view: 'Встаньте боком к камере', need: ['hip', 'kn', 'an', 'sh'], metric: (F) => Math.min(ang(F.j('hip', 0), F.j('kn', 0), F.j('an', 0)), ang(F.j('hip', 1), F.j('kn', 1), F.j('an', 1))), down: 125, up: 160,
+      rep: (mn) => (mn > 105 ? 'Опускайтесь ниже — колено почти до пола' : null),
+      live: (F, m) => (m < 140 && lean(F) > 25 ? 'Держите корпус вертикально' : null) },
+    pushup: { view: 'Поставьте телефон сбоку на уровне пола', need: ['sh', 'el', 'wr', 'hip', 'an'], metric: elbow, down: 115, up: 155,
+      rep: (mn) => (mn > 100 ? 'Опускайтесь ниже — грудь к полу' : null), live: (F) => bodyLine(F) },
+    plank: { view: 'Телефон сбоку, на уровне пола', need: ['sh', 'hip', 'an'], hold: true, live: (F) => bodyLine(F) },
+    bridge: { view: 'Лягте боком к камере', need: ['sh', 'hip', 'kn'], metric: (F) => ang(F.j('sh'), F.j('hip'), F.j('kn')), inv: true, down: 135, up: 155,
+      rep: (mn, mx) => (mx < 165 ? 'Поднимите таз выше — до прямой линии' : null) },
+    rdl: { view: 'Встаньте боком к камере', need: ['sh', 'hip', 'kn', 'an'], metric: lean, inv: true, down: 25, up: 50,
+      live: (F, m) => (m > 40 && knee(F) < 140 ? 'Меньше сгибайте колени — отводите таз назад' : null) },
+    bent_row: { view: 'Встаньте боком к камере', need: ['sh', 'el', 'wr', 'hip'], metric: elbow, down: 110, up: 150,
+      live: (F) => (lean(F) < 30 ? 'Наклонитесь ниже — корпус почти параллельно полу' : null) },
+    curl: { view: 'Встаньте боком к камере', need: ['sh', 'el', 'wr'], metric: elbow, down: 75, up: 145,
+      rep: (mn) => (mn > 65 ? 'Поднимайте гантель выше — к плечу' : null),
+      live: (F) => (fromVert(F.j('sh'), F.j('el')) > 28 ? 'Прижмите локоть к корпусу' : null) },
+    shoulder_press: { view: 'Сядьте лицом или боком к камере', need: ['sh', 'el', 'wr'], metric: elbow, inv: true, down: 105, up: 150,
+      rep: (mn, mx) => (mx < 160 ? 'Выпрямляйте руки полностью вверху' : null),
+      live: (F) => (lean(F) > 20 ? 'Не прогибайтесь назад' : null) },
+    lateral: { view: 'Встаньте лицом к камере', need: ['sh', 'el', 'wr', 'hip'], metric: (F) => ang(F.j('hip'), F.j('sh'), F.j('wr')), inv: true, down: 35, up: 70,
+      rep: (mn, mx) => (mx > 110 ? 'Не поднимайте руки выше плеч' : mx < 75 ? 'Поднимайте руки до уровня плеч' : null) },
+    jack: { view: 'Встаньте лицом к камере', need: ['sh', 'wr', 'hip'], metric: (F) => ang(F.j('hip'), F.j('sh'), F.j('wr')), inv: true, down: 60, up: 130 },
+    pushdown: { view: 'Встаньте боком к камере', need: ['sh', 'el', 'wr'], metric: elbow, inv: true, down: 110, up: 150,
+      live: (F) => (fromVert(F.j('sh'), F.j('el')) > 25 ? 'Прижмите локти к корпусу' : null) },
+    dips: { view: 'Телефон сбоку', need: ['sh', 'el', 'wr'], metric: elbow, down: 115, up: 150,
+      rep: (mn) => (mn > 100 ? 'Опускайтесь ниже — до прямого угла в локтях' : null) },
+    march: { view: 'Встаньте лицом или боком к камере', need: ['hip', 'kn'], metric: (F) => Math.min(ang(F.j('sh', 0), F.j('hip', 0), F.j('kn', 0)), ang(F.j('sh', 1), F.j('hip', 1), F.j('kn', 1))), down: 125, up: 155 }
+  };
+  const ALIAS = { squat_bar: 'squat', side_plank: 'plank', pushup: 'pushup', burpee: 'squat', calf: null, crunch: null, superman: null, leg_press: null, leg_curl: null, bench: null, incline: null, pulldown: null, seated_row: null, hyper: null };
+  const ruleFor = (id) => RULES[id] || (ALIAS[id] && RULES[ALIAS[id]]) || null;
+
+  // соединения скелета для рисования
+  const BONES = [[11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24], [23, 24], [23, 25], [25, 27], [27, 31], [24, 26], [26, 28], [28, 32]];
+
+  /* ---------- голос ---------- */
+  const voice = { on: true, last: {}, say(text, key, gap) {
+    if (!this.on || !window.speechSynthesis) return;
+    const now = Date.now(); key = key || text;
+    if (this.last[key] && now - this.last[key] < (gap || 4000)) return;
+    this.last[key] = now;
+    try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'ru-RU'; u.rate = 1.05; speechSynthesis.speak(u); } catch (e) {}
+  } };
+
+  /* ---------- загрузка модели (один раз) ---------- */
+  let modelP = null;
+  function loadModel() {
+    if (modelP) return modelP;
+    const base = new URL('vendor/mediapipe/', location.href).href;
+    modelP = (async () => {
+      const vision = await import(base + 'vision_bundle.mjs');
+      const files = await vision.FilesetResolver.forVisionTasks(base + 'wasm');
+      const opts = (delegate) => ({ baseOptions: { modelAssetPath: base + 'pose_landmarker_lite.task', delegate }, runningMode: 'VIDEO', numPoses: 1,
+        minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.5, minTrackingConfidence: 0.5 });
+      try { return await vision.PoseLandmarker.createFromOptions(files, opts('GPU')); }
+      catch (e) { return await vision.PoseLandmarker.createFromOptions(files, opts('CPU')); }
+    })();
+    modelP.catch(() => { modelP = null; });
+    return modelP;
+  }
+
+  /* ---------- анализ потока поз ---------- */
+  function Analyzer(rule) {
+    const st = { phase: 'top', reps: 0, good: 0, mn: 999, mx: -999, holdMs: 0, issue: null, issueSince: 0, lastT: 0, feedback: null, lastRep: null, sm: null };
+    return {
+      st,
+      push(F, t) {
+        const dt = st.lastT ? Math.min(200, t - st.lastT) : 0; st.lastT = t;
+        const out = { issue: null, rep: false };
+        if (rule.metric) {
+          let m = rule.metric(F);
+          st.sm = st.sm == null ? m : st.sm * 0.6 + m * 0.4; m = st.sm;   // сглаживание дрожания
+          const work = rule.inv ? m > rule.up : m < rule.down, rest = rule.inv ? m < rule.down : m > rule.up;
+          // неполный повтор: ушли за середину амплитуды, но не дошли до нижней точки — подсказываем, не засчитываем
+          const mid = (rule.up + rule.down) / 2, half = rule.inv ? m > mid : m < mid;
+          if (st.phase === 'top') {
+            if (half) { st.partial = true; st.pmn = Math.min(st.pmn == null ? m : st.pmn, m); st.pmx = Math.max(st.pmx == null ? m : st.pmx, m); }
+            if (rest && st.partial && !work) { out.repMsg = rule.rep ? rule.rep(st.pmn, st.pmx, F) : null; out.partial = true; st.partial = false; st.pmn = st.pmx = null; }
+          }
+          if (st.phase === 'top' && work) { st.phase = 'work'; st.mn = m; st.mx = m; st.partial = false; st.pmn = st.pmx = null; }
+          if (st.phase === 'work') { st.mn = Math.min(st.mn, m); st.mx = Math.max(st.mx, m); if (rest) {
+            st.phase = 'top'; st.reps++; out.rep = true;
+            const bad = rule.rep ? rule.rep(st.mn, st.mx, F) : null;
+            if (!bad) st.good++;
+            st.lastRep = bad; out.repMsg = bad;
+          } }
+          out.m = m;
+        }
+        let issue = rule.live ? rule.live(F, out.m) : null;
+        // ошибка засчитывается, если держится дольше 0,4 с — чтобы не дёргать из-за одного кадра
+        if (issue !== st.issue) { st.issue = issue; st.issueSince = t; }
+        out.issue = issue && t - st.issueSince > 400 ? issue : null;
+        if (rule.hold && !out.issue) st.holdMs += dt;
+        return out;
+      }
+    };
+  }
+
+  /* ---------- экран камеры ---------- */
+  ui.poseCheck = function (e) {
+    const id = App.coach.find(e.name), rule = ruleFor(id), cue = App.coach.CUES[id];
+    let stream = null, raf = 0, stopped = false, facing = 'user', model = null, lastVT = -1, an = rule ? Analyzer(rule) : null;
+    const stop = () => { stopped = true; cancelAnimationFrame(raf); if (stream) stream.getTracks().forEach((t) => t.stop()); stream = null; try { speechSynthesis.cancel(); } catch (er) {} };
+    const s = sheet({ title: 'Проверка техники', detent: 'full', bare: true, onClose: stop, build: (b) => {
+      b.style.padding = '0';
+      const video = h('video', { playsinline: true, muted: true, autoplay: true, class: 'pc-video' });
+      video.setAttribute('playsinline', ''); video.muted = true;
+      const cv = h('canvas', { class: 'pc-canvas' });
+      const reps = h('div', { class: 'pc-reps num' }, rule && rule.hold ? '0 с' : '0');
+      const repsLbl = h('div', { class: 'pc-reps-l' }, rule && rule.hold ? 'в правильной позе' : 'повторов');
+      const msg = h('div', { class: 'pc-msg' }, 'Запускаю камеру…');
+      const mini = App.coach.svgNode();
+      const voiceBtn = h('button', { class: 'pc-btn', type: 'button', 'aria-label': 'Голосовые подсказки', onclick: () => { voice.on = !voice.on; voiceBtn.classList.toggle('off', !voice.on); haptic(6); } }, icon('info', 18));
+      const flipBtn = h('button', { class: 'pc-btn', type: 'button', 'aria-label': 'Сменить камеру', onclick: () => { facing = facing === 'user' ? 'environment' : 'user'; start(); } }, icon('refresh', 18));
+      const closeBtn = h('button', { class: 'pc-btn', type: 'button', 'aria-label': 'Закрыть', onclick: () => s.close() }, icon('xmark', 16));
+      const stage = h('div', { class: 'pc-stage' }, video, cv,
+        h('div', { class: 'pc-top' }, h('div', { class: 'pc-count' }, reps, repsLbl), h('div', { class: 'pc-tools' }, voiceBtn, flipBtn, closeBtn)),
+        h('div', { class: 'pc-mini' }, mini),
+        h('div', { class: 'pc-bottom' }, h('div', { class: 'pc-name' }, e.name), msg));
+      kidsAdd(b, stage);
+      requestAnimationFrame(() => App.coach.mount(mini, id, { speed: 1 }));
+      const setMsg = (text, kind) => { msg.textContent = text; msg.className = 'pc-msg ' + (kind || ''); };
+
+      async function start() {
+        if (stream) stream.getTracks().forEach((t) => t.stop());
+        video.classList.toggle('mirror', facing === 'user'); cv.classList.toggle('mirror', facing === 'user');
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facing }, width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+        } catch (er) { return setMsg('Нет доступа к камере. Разрешите его в настройках телефона для этого приложения.', 'bad'); }
+        if (stopped) return stop();
+        video.srcObject = stream; await video.play().catch(() => {});
+        if (!model) {
+          setMsg('Загружаю распознавание позы… Это нужно один раз, около 15 МБ.');
+          try { model = await loadModel(); } catch (er) { return setMsg('Не удалось загрузить распознавание позы. Проверьте интернет и откройте снова.', 'bad'); }
+        }
+        if (stopped) return;
+        setMsg(rule ? rule.view : 'Встаньте так, чтобы всё тело было в кадре. Это упражнение я пока не оцениваю — показываю скелет.');
+        voice.say(rule ? rule.view : 'Покажу скелет. Оценку этого упражнения добавим позже.', 'view', 8000);
+        if (!raf) loop();
+      }
+
+      let lastSeen = 0, okSince = 0, lastSec = -1;
+      function loop() {
+        raf = requestAnimationFrame(loop);
+        if (stopped || !model || video.readyState < 2 || video.currentTime === lastVT) return;
+        lastVT = video.currentTime;
+        const t = performance.now();
+        let res; try { res = model.detectForVideo(video, t); } catch (er) { return; }
+        const W = video.videoWidth, H = video.videoHeight;
+        if (cv.width !== W) { cv.width = W; cv.height = H; }
+        const ctx = cv.getContext('2d'); ctx.clearRect(0, 0, W, H);
+        const lm = res && res.landmarks && res.landmarks[0];
+        if (!lm) { if (t - lastSeen > 1500) setMsg('Не вижу вас — отойдите, чтобы всё тело попало в кадр', 'warn'); return; }
+        lastSeen = t;
+        const F = frame(lm, W, H);
+        // видны ли нужные суставы
+        const need = rule ? rule.need : ['sh', 'hip'];
+        const missing = need.some((k) => { const i = IDX[k][F.s]; return F.P[i].v < 0.5; });
+        let out = null;
+        if (rule && !missing) out = an.push(F, t);
+        const bad = out && (out.issue || out.repMsg);
+        drawSkeleton(ctx, F, bad ? '#FF9F0A' : '#30D158', Math.max(W, H));
+        if (missing) { setMsg('Отойдите дальше: в кадре должно быть всё тело', 'warn'); voice.say('Отойдите дальше, мне не видно всё тело', 'far', 6000); return; }
+        if (!rule) return;
+        const st = an.st;
+        if (rule.hold) {
+          const sec = Math.floor(st.holdMs / 1000);
+          if (sec !== lastSec) { lastSec = sec; reps.textContent = sec + ' с'; if (sec && sec % 10 === 0) voice.say(sec + ' секунд', 'sec'); }
+        }
+        if (out.partial && out.repMsg) { setMsg(out.repMsg, 'warn'); voice.say(out.repMsg, 'rep-' + out.repMsg, 3000); okSince = t; return; }
+        if (out.rep) {
+          reps.textContent = String(st.reps); haptic(15);
+          reps.classList.remove('pop'); void reps.offsetWidth; reps.classList.add('pop');
+          if (out.repMsg) { setMsg(out.repMsg, 'warn'); voice.say(out.repMsg, 'rep-' + out.repMsg, 3000); }
+          else { setMsg('Отлично! Повтор засчитан правильно', 'good'); voice.say(String(st.reps), 'n', 300); }
+          okSince = t;
+          return;
+        }
+        if (out.issue) { setMsg(out.issue, 'warn'); voice.say(out.issue, out.issue, 4500); okSince = 0; }
+        else if (t - okSince > 2500) { setMsg(rule.hold ? 'Хорошо, держите' : 'Техника в порядке — продолжайте', 'good'); okSince = t; }
+      }
+      function drawSkeleton(ctx, F, color, size) {
+        const lw = Math.max(3, size / 160);
+        ctx.lineCap = 'round'; ctx.lineWidth = lw; ctx.strokeStyle = color; ctx.fillStyle = '#fff';
+        BONES.forEach(([a, c]) => { const p = F.P[a], q = F.P[c]; if (p.v < 0.4 || q.v < 0.4) return; ctx.globalAlpha = 0.9; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke(); });
+        [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28].forEach((i) => { const p = F.P[i]; if (p.v < 0.4) return; ctx.globalAlpha = 1; ctx.beginPath(); ctx.arc(p.x, p.y, lw * 1.3, 0, 7); ctx.fill(); });
+        ctx.globalAlpha = 1;
+      }
+      start();
+    } });
+  };
+
+  App.pose = { available, ruleFor, RULES, Analyzer, frame, loadModel };
 })();
 
 /* Ритм — тренировки, анализы, показатели, лекарства, трекеры воды, сна, шагов и веса. */
@@ -2857,6 +3187,9 @@ window.RITM_CONFIG = {
         h('div', null, h('h2', { style: 'font-size:24px;letter-spacing:-.02em;line-height:1.15' }, e.name),
           h('div', { class: 'chips', style: 'margin-top:8px' }, e.sets ? h('span', { class: 'chip' }, e.sets + ' × ' + (e.reps || '')) : null, e.rest ? h('span', { class: 'chip' }, icon('clock', 13), 'отдых ' + e.rest + ' с') : null)),
         e.tip ? h('div', { class: 'note', style: { '--c': 'var(--purple)' } }, h('b', { class: 'h' }, icon('sparkles', 15), 'Совет'), e.tip) : null,
+        App.pose && App.pose.available()
+          ? h('button', { class: 'btn primary block', type: 'button', onclick: () => ui.poseCheck(e) }, icon('camera', 20), App.pose.ruleFor(id) ? 'Проверить технику камерой' : 'Камера: показать мой скелет')
+          : h('p', { class: 'caption' }, 'Проверка техники камерой работает в установленном приложении «Ритм».'),
         h('div', null, h('div', { class: 'caption', style: 'margin-bottom:8px' }, 'Как выполнять'), h('div', { class: 'card' }, h('ol', { class: 'coach-steps' }, cue.steps.map((x) => h('li', null, x))))),
         h('div', { class: 'note', style: { '--c': 'var(--orange)' } }, h('b', { class: 'h' }, icon('info', 15), 'Частые ошибки'), h('ul', null, cue.errs.map((x) => h('li', null, x)))),
         h('div', { class: 'note', style: { '--c': 'var(--blue)' } }, h('b', { class: 'h' }, icon('drop', 15), 'Дыхание'), cue.breath)));

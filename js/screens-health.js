@@ -121,6 +121,9 @@
         h('div', null, h('h2', { style: 'font-size:24px;letter-spacing:-.02em;line-height:1.15' }, e.name),
           h('div', { class: 'chips', style: 'margin-top:8px' }, e.sets ? h('span', { class: 'chip' }, e.sets + ' × ' + (e.reps || '')) : null, e.rest ? h('span', { class: 'chip' }, icon('clock', 13), 'отдых ' + e.rest + ' с') : null)),
         e.tip ? h('div', { class: 'note', style: { '--c': 'var(--purple)' } }, h('b', { class: 'h' }, icon('sparkles', 15), 'Совет'), e.tip) : null,
+        App.pose && App.pose.available()
+          ? h('button', { class: 'btn primary block', type: 'button', onclick: () => ui.poseCheck(e) }, icon('camera', 20), App.pose.ruleFor(id) ? 'Проверить технику камерой' : 'Камера: показать мой скелет')
+          : h('p', { class: 'caption' }, 'Проверка техники камерой работает в установленном приложении «Ритм».'),
         h('div', null, h('div', { class: 'caption', style: 'margin-bottom:8px' }, 'Как выполнять'), h('div', { class: 'card' }, h('ol', { class: 'coach-steps' }, cue.steps.map((x) => h('li', null, x))))),
         h('div', { class: 'note', style: { '--c': 'var(--orange)' } }, h('b', { class: 'h' }, icon('info', 15), 'Частые ошибки'), h('ul', null, cue.errs.map((x) => h('li', null, x)))),
         h('div', { class: 'note', style: { '--c': 'var(--blue)' } }, h('b', { class: 'h' }, icon('drop', 15), 'Дыхание'), cue.breath)));

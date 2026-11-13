@@ -200,76 +200,142 @@
   const line = (e, a, b) => { e.setAttribute('x1', a[0].toFixed(1)); e.setAttribute('y1', a[1].toFixed(1)); e.setAttribute('x2', b[0].toFixed(1)); e.setAttribute('y2', b[1].toFixed(1)); };
   const perp = (a, b) => { let dx = b[0] - a[0], dy = b[1] - a[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l; let n = [-dy, dx]; if (n[1] < 0 || (n[1] === 0 && n[0] < 0)) n = [dy, -dx]; return n; };
 
+  // объёмные формы: «капсула» между двумя суставами с разными радиусами
+  const f1 = (v) => v.toFixed(1);
+  const circ = (c, r) => 'M' + f1(c[0] - r) + ' ' + f1(c[1]) + 'a' + f1(r) + ' ' + f1(r) + ' 0 1 0 ' + f1(2 * r) + ' 0a' + f1(r) + ' ' + f1(r) + ' 0 1 0 ' + f1(-2 * r) + ' 0Z';
+  function capsule(A, B, rA, rB) {
+    let dx = B[0] - A[0], dy = B[1] - A[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+    const nx = -dy, ny = dx;
+    return 'M' + f1(A[0] + nx * rA) + ' ' + f1(A[1] + ny * rA) + 'L' + f1(B[0] + nx * rB) + ' ' + f1(B[1] + ny * rB) +
+      'L' + f1(B[0] - nx * rB) + ' ' + f1(B[1] - ny * rB) + 'L' + f1(A[0] - nx * rA) + ' ' + f1(A[1] - ny * rA) + 'Z' + circ(A, rA) + circ(B, rB);
+  }
+  // плавный контур по точкам (квадратичные кривые через середины)
+  function smooth(pts) {
+    let d = 'M' + f1((pts[0][0] + pts[1][0]) / 2) + ' ' + f1((pts[0][1] + pts[1][1]) / 2);
+    for (let i = 1; i <= pts.length; i++) {
+      const p = pts[i % pts.length], q = pts[(i + 1) % pts.length];
+      d += 'Q' + f1(p[0]) + ' ' + f1(p[1]) + ' ' + f1((p[0] + q[0]) / 2) + ' ' + f1((p[1] + q[1]) / 2);
+    }
+    return d + 'Z';
+  }
+  // корпус: таз, талия, грудь, плечи; спереди грудь выпуклее, сзади — ягодицы
+  function torsoPath(hip, sh, front, breath) {
+    let ux = sh[0] - hip[0], uy = sh[1] - hip[1]; const l = Math.hypot(ux, uy) || 1; ux /= l; uy /= l;
+    const fx = -uy, fy = ux;   // «вперёд» — в сторону груди
+    const W = front ? [[0, 11, 11], [0.42, 9.2, 9.2], [0.74, 12.6 * breath, 12.6 * breath], [1, 13.5, 13.5]]
+      : [[-0.06, 7.5, 9.6], [0.4, 6.4, 6.6], [0.74, 9.6 * breath, 7.2], [1, 6.8, 7]];
+    const at = (k, side, w) => [hip[0] + ux * l * k + fx * w * side, hip[1] + uy * l * k + fy * w * side];
+    const pts = W.map((r) => at(r[0], 1, r[1])).concat(W.slice().reverse().map((r) => at(r[0], -1, r[2])));
+    return smooth(pts);
+  }
+
   function build(svg, id) {
     const st = prep(id), a = st.a, F = new Set(a.focus || []), front = !!a.front, W0 = st.W0, fy = st.fy;
     svg.setAttribute('viewBox', '0 0 240 190');
     svg.classList.add('coach-svg');
+    const uidg = 'cg' + Math.random().toString(36).slice(2, 8);
+    const defs = el('defs', {}, svg);
+    const rg = el('radialGradient', { id: uidg + 's' }, defs);
+    el('stop', { offset: '0', 'stop-color': 'currentColor', 'stop-opacity': '.22' }, rg);
+    el('stop', { offset: '1', 'stop-color': 'currentColor', 'stop-opacity': '0' }, rg);
     const back = el('g', { class: 'cp' }, svg);
-    // неподвижный инвентарь — по первой позе
     const props = new Set(a.props || []);
     if (fy < FLOOR) el('line', { x1: 0, x2: 240, y1: FLOOR + 1, y2: FLOOR + 1, class: 'cfl' }, back);
     el('line', { x1: 0, x2: 240, y1: fy + 1, y2: fy + 1, class: 'cfl' }, back);
-    const shadow = el('ellipse', { cx: 120, cy: FLOOR + 2, rx: 40, ry: 3.5, class: 'csh' }, back);
+    const shadow = el('ellipse', { cx: 120, cy: FLOOR + 1.5, rx: 40, ry: 5, fill: 'url(#' + uidg + 's)', class: 'csh2' }, back);
     const pad = (from, to, off, stand) => {
       const A = W0[from], B = W0[to], n = perp(A, B);
       const a1 = [A[0] + n[0] * off, A[1] + n[1] * off], b1 = [B[0] + n[0] * off, B[1] + n[1] * off];
       line(el('line', { class: 'cpad' }, back), a1, b1);
       if (stand) { const m = [(a1[0] + b1[0]) / 2, (a1[1] + b1[1]) / 2]; line(el('line', { class: 'cleg' }, back), [m[0], m[1] + 3], [m[0], FLOOR]); }
     };
-    if (props.has('pad')) pad('sh', 'hip', 10, true);
-    if (props.has('padlegs')) pad('sh', 'kn', 10, true);
-    if (props.has('padhyper')) { pad('hip', 'kn', 10, true); }
-    if (props.has('seat')) { pad('sh', 'hip', 10, false); const h0 = W0.hip; el('rect', { x: h0[0] - 22, y: h0[1] + 7, width: 36, height: FLOOR - h0[1] - 7, rx: 5, class: 'cbox' }, back); }
-    if (props.has('box')) { const h0 = W0.hip; el('rect', { x: h0[0] - 18, y: h0[1] + 7, width: 30, height: FLOOR - h0[1] - 7, rx: 5, class: 'cbox' }, back); }
+    if (props.has('pad')) pad('sh', 'hip', 11, true);
+    if (props.has('padlegs')) pad('sh', 'kn', 11, true);
+    if (props.has('padhyper')) pad('hip', 'kn', 10, true);
+    if (props.has('seat')) { pad('sh', 'hip', 11, false); const h0 = W0.hip; el('rect', { x: h0[0] - 22, y: h0[1] + 8, width: 36, height: Math.max(0, FLOOR - h0[1] - 8), rx: 5, class: 'cbox' }, back); }
+    if (props.has('box')) { const h0 = W0.hip; el('rect', { x: h0[0] - 18, y: h0[1] + 8, width: 30, height: Math.max(0, FLOOR - h0[1] - 8), rx: 5, class: 'cbox' }, back); }
     if (props.has('chair')) { const hd = W0.ha; el('rect', { x: hd[0] - 30, y: hd[1] + 3, width: 36, height: 6, rx: 3, class: 'cbox' }, back); line(el('line', { class: 'cleg' }, back), [hd[0] - 26, hd[1] + 9], [hd[0] - 26, FLOOR]); line(el('line', { class: 'cleg' }, back), [hd[0] + 2, hd[1] + 9], [hd[0] + 2, FLOOR]); }
     let cable = null, cableFrom = null, plate = null;
-    if (props.has('cable_top')) { cableFrom = [W0.ha[0] + 16, 14]; }
-    if (props.has('cable_up')) { cableFrom = [W0.ha[0], 6]; }
+    if (props.has('cable_top')) cableFrom = [W0.ha[0] + 16, 14];
+    if (props.has('cable_up')) cableFrom = [W0.ha[0], 6];
     if (props.has('cable_front')) { cableFrom = [W0.to[0] + 22, W0.ha[1]]; el('rect', { x: cableFrom[0], y: cableFrom[1] - 30, width: 8, height: FLOOR - cableFrom[1] + 30, rx: 3, class: 'cbox' }, back); }
     if (cableFrom) { if (!props.has('cable_front')) el('rect', { x: cableFrom[0] - 4, y: 0, width: 8, height: cableFrom[1], class: 'cbox' }, back); el('circle', { cx: cableFrom[0], cy: cableFrom[1], r: 4, class: 'cpul' }, back); cable = el('line', { class: 'ccab' }, back); }
     if (props.has('platform')) plate = el('line', { class: 'cpad' }, back);
-
-    // тело: дальние конечности, корпус, голова, ближние конечности
-    const seg = (cls, key, far) => el('line', { class: 'cs ' + cls + (F.has(key) ? ' fc' : '') + (far ? ' far' : '') }, svg);
-    const far = { th: seg('th', 'TH', true), sh: seg('shn', 'SH', true), ft: seg('ft', 'SH', true), ua: seg('ua', 'UA', true), fa: seg('fa', 'FA', true) };
-    const torso = seg(front ? 'tor tf' : 'tor', 'T');
-    const head = el('circle', { r: L.HR, class: 'chead' }, svg);
-    const near = { th: seg('th', 'TH'), sh: seg('shn', 'SH'), ft: seg('ft', 'SH'), ua: seg('ua', 'UA'), fa: seg('fa', 'FA') };
-    if (front) { far.ua.classList.remove('far'); far.fa.classList.remove('far'); far.th.classList.remove('far'); far.sh.classList.remove('far'); far.ft.classList.remove('far'); }
-    const fr = el('g', { class: 'cp' }, svg);
-    const db1 = props.has('db') ? el('rect', { width: 16, height: 7, rx: 3, class: 'cdb' }, fr) : null;
-    const db2 = props.has('db') && !front ? null : props.has('db') ? el('rect', { width: 16, height: 7, rx: 3, class: 'cdb' }, fr) : null;
-    const bar = props.has('bar') ? el('circle', { r: 12, class: 'cplate' }, fr) : null;
     const barback = props.has('barback') ? el('circle', { r: 10, class: 'cplate' }, back) : null;
 
-    return function draw(P, rootX, lift) {
+    // тело: дальние конечности (в тени), корпус и голова, ближние конечности; поверх — подсветка работающих мышц
+    const path = (cls, parent) => el('path', { class: cls }, parent);
+    const farG = el('g', { class: front ? 'cfar0' : 'cfar' }, svg);
+    const mk = (g, hl) => ({ th: path('cbot', g), sh: path('cbot', g), ft: path('cshoe', g), ua: path('ctop', g), fa: path('cskin', g), hand: path('cskin', g),
+      hlth: hl && F.has('TH') ? path('chl', g) : null, hlsh: hl && F.has('SH') ? path('chl', g) : null, hlua: hl && F.has('UA') ? path('chl', g) : null, hlfa: hl && F.has('FA') ? path('chl', g) : null });
+    const far = mk(farG, front);
+    const neck = path('cskin', svg);
+    const torso = path('ctop', svg);
+    const shorts = path('cbot', svg);
+    const hlT = F.has('T') ? path('chl', svg) : null;
+    const hair = path('chair', svg), face = path('cskin', svg), nose = path('cskin', svg);
+    const nearG = el('g', {}, svg);
+    const near = mk(nearG, true);
+    const fr = el('g', { class: 'cp' }, svg);
+    const db1 = props.has('db') ? el('rect', { width: 16, height: 7, rx: 3, class: 'cdb' }, fr) : null;
+    const db2 = props.has('db') && front ? el('rect', { width: 16, height: 7, rx: 3, class: 'cdb' }, fr) : null;
+    const bar = props.has('bar') ? el('circle', { r: 12, class: 'cplate' }, fr) : null;
+
+    const limb = (S, hip, sh, kn, an, to, el_, ha, Ln) => {
+      const thP = capsule(hip, kn, front ? 6.6 : 7.2, 5), shP = capsule(kn, an, 4.9, 3.3);
+      S.th.setAttribute('d', thP); S.sh.setAttribute('d', shP);
+      // стопа: от пятки к носку
+      let dx = to[0] - an[0], dy = to[1] - an[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+      const heel = [an[0] - dx * 3, an[1] - dy * 3];
+      S.ft.setAttribute('d', capsule(heel, to, 3.6, 2.6));
+      const uaP = capsule(sh, el_, 4.8, 3.7), faP = capsule(el_, ha, 3.6, 2.7);
+      S.ua.setAttribute('d', uaP); S.fa.setAttribute('d', faP); S.hand.setAttribute('d', circ(ha, 3.3));
+      if (S.hlth) S.hlth.setAttribute('d', thP); if (S.hlsh) S.hlsh.setAttribute('d', shP);
+      if (S.hlua) S.hlua.setAttribute('d', uaP); if (S.hlfa) S.hlfa.setAttribute('d', faP);
+    };
+
+    return function draw(P, rootX, lift, t) {
       const J = fk(P, front), dy = fy - lowest(J) + (lift || 0);
-      const w = (k) => [J[k][0] + rootX, J[k][1] + dy];
-      const W = {}; for (const k in J) W[k] = w(k);
-      line(far.th, W.hp2, W.kn2); line(far.sh, W.kn2, W.an2); line(far.ft, W.an2, W.to2); line(far.ua, W.sh2, W.el2); line(far.fa, W.el2, W.ha2);
-      line(torso, W.hip, W.sh);
-      head.setAttribute('cx', W.head[0].toFixed(1)); head.setAttribute('cy', W.head[1].toFixed(1));
-      line(near.th, W.hp1, W.kn); line(near.sh, W.kn, W.an); line(near.ft, W.an, W.to); line(near.ua, W.sh1, W.el); line(near.fa, W.el, W.ha);
-      const xs = [W.an[0], W.an2[0], W.to[0], W.to2[0], W.hip[0]];
+      const W = {}; for (const k in J) W[k] = [J[k][0] + rootX, J[k][1] + dy];
+      const breath = 1 + 0.035 * Math.sin((t || 0) * 2 * Math.PI / 3.4);
+      limb(far, W.hp2, W.sh2, W.kn2, W.an2, W.to2, W.el2, W.ha2);
+      limb(near, W.hp1, W.sh1, W.kn, W.an, W.to, W.el, W.ha);
+      torso.setAttribute('d', torsoPath(W.hip, W.sh, front, breath));
+      if (hlT) hlT.setAttribute('d', torsoPath(W.hip, W.sh, front, breath));
+      // шорты/пояс: нижняя часть корпуса
+      const sx = W.sh[0] - W.hip[0], sy = W.sh[1] - W.hip[1];
+      shorts.setAttribute('d', torsoPath(W.hip, [W.hip[0] + sx * 0.3, W.hip[1] + sy * 0.3], front, 1).replace(/Z$/, 'Z'));
+      // шея и голова: волосы на затылке, лицо и нос смотрят вперёд
+      let ux = W.head[0] - W.sh[0], uy = W.head[1] - W.sh[1]; const ul = Math.hypot(ux, uy) || 1; ux /= ul; uy /= ul;
+      const fx = front ? 0 : -uy, fy2 = front ? 0 : ux;
+      neck.setAttribute('d', capsule(W.sh, [W.sh[0] + ux * 9, W.sh[1] + uy * 9], 3.8, 3.6));
+      const hc = W.head;
+      hair.setAttribute('d', circ([hc[0] - fx * 1.6 + ux * 1.1, hc[1] - fy2 * 1.6 + uy * 1.1], 10));
+      face.setAttribute('d', circ([hc[0] + fx * 1.2 - ux * 0.6, hc[1] + fy2 * 1.2 - uy * 0.6], 9));
+      nose.setAttribute('d', front ? '' : circ([hc[0] + fx * 9.4 - ux * 0.5, hc[1] + fy2 * 9.4 - uy * 0.5], 1.9));
+      // тень под телом
+      const xs = [W.an[0], W.an2[0], W.to[0], W.to2[0], W.hip[0], W.sh[0]];
       const mnx = Math.min.apply(null, xs), mxx = Math.max.apply(null, xs);
-      shadow.setAttribute('cx', ((mnx + mxx) / 2).toFixed(1)); shadow.setAttribute('rx', Math.max(18, (mxx - mnx) / 2 + 14).toFixed(1));
-      shadow.setAttribute('opacity', Math.max(0.25, 1 + (lift || 0) / 30).toFixed(2));
+      shadow.setAttribute('cx', f1((mnx + mxx) / 2)); shadow.setAttribute('rx', f1(Math.max(20, (mxx - mnx) / 2 + 16)));
+      shadow.setAttribute('opacity', Math.max(0.3, 1 + (lift || 0) / 25).toFixed(2));
       if (cable) line(cable, cableFrom, W.ha);
       if (plate) { const n = perp(W.kn, W.an), c = [W.to[0] + 3, W.to[1]]; line(plate, [c[0] - n[0] * 22, c[1] - n[1] * 22], [c[0] + n[0] * 22, c[1] + n[1] * 22]); }
-      if (db1) { db1.setAttribute('x', (W.ha[0] - 8).toFixed(1)); db1.setAttribute('y', (W.ha[1] - 3.5).toFixed(1)); }
-      if (db2) { db2.setAttribute('x', (W.ha2[0] - 8).toFixed(1)); db2.setAttribute('y', (W.ha2[1] - 3.5).toFixed(1)); }
-      if (bar) { bar.setAttribute('cx', W.ha[0].toFixed(1)); bar.setAttribute('cy', W.ha[1].toFixed(1)); }
-      if (barback) { const d = [W.sh[0] - W.hip[0], W.sh[1] - W.hip[1]], l = Math.hypot(d[0], d[1]) || 1; barback.setAttribute('cx', (W.sh[0] - d[0] / l * 4 - 3).toFixed(1)); barback.setAttribute('cy', (W.sh[1] - d[1] / l * 4).toFixed(1)); }
+      if (db1) { db1.setAttribute('x', f1(W.ha[0] - 8)); db1.setAttribute('y', f1(W.ha[1] - 3.5)); }
+      if (db2) { db2.setAttribute('x', f1(W.ha2[0] - 8)); db2.setAttribute('y', f1(W.ha2[1] - 3.5)); }
+      if (bar) { bar.setAttribute('cx', f1(W.ha[0])); bar.setAttribute('cy', f1(W.ha[1])); }
+      if (barback) { const l2 = Math.hypot(sx, sy) || 1; barback.setAttribute('cx', f1(W.sh[0] - sx / l2 * 4 - 3)); barback.setAttribute('cy', f1(W.sh[1] - sy / l2 * 4)); }
     };
   }
 
-  // поза в момент времени: удержание в начале каждого отрезка, затем плавный переход
+  // поза в момент времени: удержание, плавный переход; руки и голова чуть запаздывают — как у живого человека
+  const LAG = { ua: 0.08, fa: 0.12, ua2: 0.08, fa2: 0.12, H: 0.05 };
   function sample(st, time, speed) {
     const a = st.a, n = st.kf.length, segDur = (a.dur || 2.2) / (speed || 1);
-    const tt = (time / segDur) % n, i = Math.floor(tt), loc = tt - i, j = (i + 1) % n, HOLD = 0.24;
-    const k = loc < HOLD ? 0 : ease((loc - HOLD) / (1 - HOLD));
+    const tt = (time / segDur) % n, i = Math.floor(tt), loc = tt - i, j = (i + 1) % n, HOLD = 0.22;
+    const kAt = (lag) => { const x = (loc - HOLD - lag) / (1 - HOLD - lag); return x <= 0 ? 0 : x >= 1 ? 1 : ease(x); };
+    const k = kAt(0);
     const A = st.kf[i], B = st.kf[j], P = {};
-    DEF.forEach((key) => { P[key] = key === 'lift' ? A.p.lift + (B.p.lift - A.p.lift) * k : lerpA(A.p[key], B.p[key], k); });
+    DEF.forEach((key) => { const kk = LAG[key] ? kAt(LAG[key]) : k; P[key] = key === 'lift' ? A.p.lift + (B.p.lift - A.p.lift) * k : lerpA(A.p[key], B.p[key], kk); });
     return { P, rootX: A.rootX + (B.rootX - A.rootX) * k, lift: P.lift, phase: k > 0.5 ? j : i };
   }
 
@@ -286,7 +352,7 @@
       let s;
       if (reduce()) { const st = prep(f.id), n = st.kf.length, i = Math.floor(t / 1.8) % n; s = { P: st.kf[i].p, rootX: st.kf[i].rootX, lift: 0, phase: i }; }
       else s = sample(prep(f.id), t, f.speed);
-      f.draw(s.P, s.rootX, s.lift);
+      f.draw(s.P, s.rootX, s.lift, t);
       if (f.onPhase && s.phase !== f.ph) { f.ph = s.phase; f.onPhase(s.phase); }
     });
     if (live.size && document.visibilityState !== 'hidden') raf = requestAnimationFrame(loop);
